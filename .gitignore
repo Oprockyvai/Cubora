@@ -1,0 +1,21 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.iml
+.idea/
+
+# SECRETS - never commit these
+android/key.properties
+*.jks
+*.keystore

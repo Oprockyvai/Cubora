@@ -1,0 +1,69 @@
+# Codemagic CI/CD for Cubora  (https://codemagic.io)
+# Builds a signed Android App Bundle (.aab) for Google Play + a release APK for quick phone testing.
+#
+# BEFORE THE FIRST BUILD
+#   1. Change PACKAGE_ORG below (final app id = <PACKAGE_ORG>.cubora, PERMANENT on Google Play).
+#   2. In Codemagic: Teams > Personal account > Code signing identities > Android keystores
+#      > "Generate keystore" (or upload yours). Reference name MUST be: cubora_upload_key
+#      Key alias: upload. Download/back up the keystore + passwords somewhere safe.
+
+workflows:
+  cubora-android-release:
+    name: Cubora Android Release
+    instance_type: linux_x2
+    max_build_duration: 45
+
+    environment:
+      flutter: stable
+      android_signing:
+        - cubora_upload_key          # exposes CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+      vars:
+        PACKAGE_ORG: com.yourname    # <-- CHANGE THIS (e.g. com.rahim)
+        BUILD_NAME: 1.0.0            # visible version; bump for each public release
+      # groups:
+      #   - google_play              # only if you enable automatic publishing (see bottom)
+
+    scripts:
+      - name: Generate Android project + Cubora config
+        script: dart run tool/setup.dart --org "$PACKAGE_ORG"
+
+      - name: Write android/key.properties from Codemagic signing
+        script: |
+          cat > android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_KEYSTORE_PATH
+          EOF
+
+      - name: Static analysis (informational)
+        script: flutter analyze || true
+
+      - name: Unit tests
+        script: flutter test
+
+      - name: Build App Bundle (.aab) for Google Play
+        script: flutter build appbundle --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+      - name: Build APK for direct install / testing
+        script: flutter build apk --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com   # <-- CHANGE THIS
+        notify:
+          success: true
+          failure: true
+
+      # OPTIONAL - automatic upload to Google Play. Enable only AFTER your first release has been
+      # uploaded manually in Play Console and you created a service account (see README).
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal              # internal | alpha (closed) | beta | production
+      #   submit_as_draft: true        # needed while the app is still a draft in Play Console
