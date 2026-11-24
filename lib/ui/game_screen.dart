@@ -1,15 +1,18 @@
-import 'dart:io';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../core/game_bridge.dart';
+import '../core/theme.dart';
 import 'error_view.dart';
 import 'exit_dialog.dart';
 import 'loading_cover.dart';
 
+/// Hosts the Cubora game (bundled HTML5, fully offline) inside a native shell.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -17,67 +20,19 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen>
-    with WidgetsBindingObserver {
-  final GameBridge _bridge = const GameBridge();
-  late final WebViewController _controller;
-  bool _loading = true;
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
+  static const String _entry = 'assets/game/index.html';
+
+  late final WebViewController _web;
+  bool _ready = false;
   bool _failed = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _createController();
-  }
-
-  void _createController() {
-    late final PlatformWebViewControllerCreationParams params;
-    if (Platform.isAndroid) {
-      params = AndroidWebViewControllerCreationParams();
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
-
-    _controller = WebViewController.fromPlatformCreationParams(params)
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0D1030))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) {
-            if (mounted) {
-              setState(() {
-                _loading = true;
-                _failed = false;
-              });
-            }
-          },
-          onPageFinished: (_) {
-            if (mounted) setState(() => _loading = false);
-          },
-          onWebResourceError: (_) {
-            if (mounted) {
-              setState(() {
-                _loading = false;
-                _failed = true;
-              });
-            }
-          },
-        ),
-      )
-      ..addJavaScriptChannel(
-        'CuboraBridge',
-        onMessageReceived: (message) {
-          if (message.message.startsWith('h:')) {
-            _bridge.vibrate(message.message);
-          }
-        },
-      )
-      ..loadFlutterAsset('assets/game/index.html');
-
-    if (_controller.platform is AndroidWebViewController) {
-      AndroidWebViewController.enableDebugging(false);
-    }
+    _web = _createController();
+    unawaited(_web.loadFlutterAsset(_entry));
   }
 
   @override
@@ -86,61 +41,93 @@ class _GameScreenState extends State<GameScreen>
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _controller.runJavaScript('window.__cuboraPause?.()');
-    } else if (state == AppLifecycleState.resumed) {
-      _controller.runJavaScript('window.__cuboraResume?.()');
+  WebViewController _createController() {
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(CuboraColors.bg)
+      ..enableZoom(false)
+      ..addJavaScriptChannel(
+        GameBridge.channelName,
+        onMessageReceived: (m) => GameBridge.onMessage(m.message),
+      )
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          // The game is 100% offline: never navigate away from the bundled files.
+          onNavigationRequest: (request) {
+            final url = request.url;
+            final local = url.startsWith('file:') || url.startsWith('about:');
+            return local ? NavigationDecision.navigate : NavigationDecision.prevent;
+          },
+          onPageFinished: (_) {
+            // Small delay so the game's own splash is already painted.
+            Future<void>.delayed(const Duration(milliseconds: 150), () {
+              if (mounted) setState(() => _ready = true);
+            });
+          },
+          onWebResourceError: (error) {
+            if (error.isForMainFrame ?? false) {
+              if (mounted) setState(() => _failed = true);
+            }
+          },
+        ),
+      );
+
+    final platform = controller.platform;
+    if (platform is AndroidWebViewController) {
+      unawaited(AndroidWebViewController.enableDebugging(kDebugMode));
+      unawaited(platform.setMediaPlaybackRequiresUserGesture(false));
     }
+    return controller;
   }
 
-  Future<void> _retry() async {
+  void _reload() {
     setState(() {
       _failed = false;
-      _loading = true;
+      _ready = false;
     });
-    await _controller.loadFlutterAsset('assets/game/index.html');
+    unawaited(_web.loadFlutterAsset(_entry));
   }
 
-  Future<void> _handleBack() async {
-    if (_failed) {
-      await SystemNavigator.pop();
-      return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        unawaited(GameBridge.pause(_web)); // stop music + timers in background
+      case AppLifecycleState.resumed:
+        unawaited(GameBridge.resume(_web));
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
     }
-    final result = await _controller.runJavaScriptReturningResult(
-      'window.__cuboraBack?.()',
-    );
-    final consumed = GameBridge.parseBool(result);
-    if (!consumed && mounted) {
-      final quit = await ExitDialog.show(context);
-      if (quit) await SystemNavigator.pop();
-    }
+  }
+
+  Future<void> _onBack() async {
+    final consumed = await GameBridge.back(_web);
+    if (consumed || !mounted) return;
+    final quit = await showExitDialog(context);
+    if (quit) await SystemNavigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
-        if (!didPop) _handleBack();
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_onBack());
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0D1030),
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              WebViewWidget(controller: _controller),
-              if (_loading) const LoadingCover(),
-              if (_failed)
-                ErrorView(onRetry: _retry),
-            ],
-          ),
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(gradient: CuboraTheme.backdrop),
+            ),
+            SafeArea(child: WebViewWidget(controller: _web)),
+            if (_failed) ErrorView(onRetry: _reload),
+            LoadingCover(visible: !_ready && !_failed),
+          ],
         ),
       ),
     );
