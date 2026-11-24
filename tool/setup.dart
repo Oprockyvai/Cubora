@@ -1,170 +1,216 @@
+// Cubora - one-time project setup.
+//
+//   dart run tool/setup.dart --org com.yourname
+//
+// What it does (safe to run again, it is idempotent):
+//   1. Generates the Android host project with `flutter create` (matching YOUR Flutter SDK)
+//   2. Applies the Cubora Android customisation from android_overlay/
+//      (manifest, themes, splash, launcher icons, signing template)
+//   3. Adds release-signing support to android/app/build.gradle(.kts)
+//   4. Runs `flutter pub get`
+//
+// The package name ("applicationId") is PERMANENT once the app is on Google Play.
+// Choose it carefully, e.g. com.yourname.cubora
+
 import 'dart:io';
 
-const _usage = 'Usage: dart run tool/setup.dart --org com.example';
+const String _defaultOrg = 'com.cubora';
+const String _projectName = 'cubora';
 
-Future<void> main(List<String> arguments) async {
-  final org = _readOrg(arguments);
-  if (org == null) {
-    stderr.writeln(_usage);
-    exitCode = 64;
-    return;
+Future<void> main(List<String> args) async {
+  final org = _readOption(args, '--org') ?? _defaultOrg;
+
+  if (!File('pubspec.yaml').existsSync() || !Directory('android_overlay').existsSync()) {
+    _fail('Run this script from the project root (the folder that contains pubspec.yaml).');
   }
 
-  final root = Directory.current;
-  final flutter = Platform.isWindows ? 'flutter.bat' : 'flutter';
-  if (!await _hasExecutable(flutter)) {
-    stderr.writeln('Flutter is not available on PATH.');
-    exitCode = 127;
-    return;
+  _step('Checking Flutter');
+  if (!await _run('flutter', ['--version'], quiet: true)) {
+    _fail('Flutter was not found. Install it first: https://docs.flutter.dev/get-started/install');
   }
 
-  final android = Directory('${root.path}${Platform.pathSeparator}android');
-  if (!await android.exists()) {
-    stdout.writeln('Creating Android project...');
-    final created = await Process.run(
-      flutter,
-      ['create', '--platforms', 'android', '--org', org, '--project-name', 'cubora', '.'],
-      workingDirectory: root.path,
-      runInShell: true,
-    );
-    if (created.exitCode != 0) {
-      stderr.write(created.stderr);
-      exitCode = created.exitCode;
-      return;
-    }
+  if (Directory('android').existsSync()) {
+    _info('android/ already exists - keeping it.');
+  } else {
+    _step('Generating Android project  (package: $org.$_projectName)');
+    final ok = await _run('flutter', [
+      'create',
+      '--platforms=android',
+      '--org',
+      org,
+      '--project-name',
+      _projectName,
+      '.',
+    ]);
+    if (!ok) _fail('"flutter create" failed. See the messages above.');
   }
 
-  final overlay = Directory('${root.path}${Platform.pathSeparator}android_overlay');
-  if (!await overlay.exists()) {
-    stderr.writeln('Missing android_overlay directory.');
-    exitCode = 1;
-    return;
+  _step('Applying Cubora Android customisation');
+  _copyDir(Directory('android_overlay'), Directory('android'));
+  _info('manifest, themes, splash and launcher icons installed.');
+
+  _step('Enabling release signing');
+  _patchGradle();
+
+  _step('Fetching packages');
+  if (!await _run('flutter', ['pub', 'get'])) {
+    _fail('"flutter pub get" failed. See the messages above.');
   }
 
-  await _copyDirectory(
-    Directory('${overlay.path}${Platform.pathSeparator}app${Platform.pathSeparator}src${Platform.pathSeparator}main'),
-    Directory('${android.path}${Platform.pathSeparator}app${Platform.pathSeparator}src${Platform.pathSeparator}main'),
-  );
+  stdout.writeln('''
 
-  await File('${root.path}${Platform.pathSeparator}android${Platform.pathSeparator}key.properties.example')
-      .parent
-      .create(recursive: true);
-  await File('${overlay.path}${Platform.pathSeparator}key.properties.example').copy(
-    '${android.path}${Platform.pathSeparator}key.properties.example',
-  );
-
-  await _configureGradle(android, '$org.cubora');
-
-  stdout.writeln('Running flutter pub get...');
-  final fetched = await Process.run(
-    flutter,
-    ['pub', 'get'],
-    workingDirectory: root.path,
-    runInShell: true,
-  );
-  stdout.write(fetched.stdout);
-  stderr.write(fetched.stderr);
-
-  if (fetched.exitCode != 0) {
-    exitCode = fetched.exitCode;
-    return;
-  }
-
-  stdout.writeln('Cubora Android setup complete.');
-  stdout.writeln('Application ID: $org.cubora');
-  stdout.writeln('Signing template: android/key.properties.example');
+All set!  Next steps
+  1. Test on a phone:        flutter run
+  2. Create your upload key: see README.md  (section "Signing key")
+  3. Build for Play Store:   flutter build appbundle --release
+''');
 }
 
-String? _readOrg(List<String> arguments) {
-  for (var i = 0; i < arguments.length; i++) {
-    if (arguments[i] == '--org' && i + 1 < arguments.length) {
-      final value = arguments[i + 1].trim();
-      if (RegExp(r'^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)+$').hasMatch(value)) {
-        return value;
-      }
-      return null;
+// ---------------------------------------------------------------------------
+// Gradle patching (release signing)
+// ---------------------------------------------------------------------------
+
+void _patchGradle() {
+  final kts = File('android/app/build.gradle.kts');
+  final groovy = File('android/app/build.gradle');
+  if (kts.existsSync()) {
+    _patch(kts, kotlin: true);
+  } else if (groovy.existsSync()) {
+    _patch(groovy, kotlin: false);
+  } else {
+    _warn('Could not find android/app/build.gradle(.kts). Add signing manually (README.md).');
+  }
+}
+
+void _patch(File file, {required bool kotlin}) {
+  var src = file.readAsStringSync();
+  if (src.contains('keystoreProperties')) {
+    _info('${file.path} already patched.');
+    return;
+  }
+
+  final loader = kotlin
+      ? '''
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+'''
+      : '''
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+''';
+
+  final signing = kotlin
+      ? '''
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
     }
+
+'''
+      : '''
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+
+''';
+
+  // 1) key.properties loader goes right before the top-level `android {` block.
+  final androidBlock = RegExp(r'^android\s*\{', multiLine: true);
+  // 2) signingConfigs go right before `buildTypes {`.
+  final buildTypes = RegExp(r'^([ \t]*)buildTypes\s*\{', multiLine: true);
+  // 3) the template signs release builds with the debug key - swap that out.
+  final debugSigning = kotlin
+      ? RegExp(r'signingConfig\s*=\s*signingConfigs\.getByName\("debug"\)')
+      : RegExp(r'signingConfig\s+signingConfigs\.debug');
+
+  if (!androidBlock.hasMatch(src) || !buildTypes.hasMatch(src) || !debugSigning.hasMatch(src)) {
+    _warn('Unexpected layout in ${file.path} - please add release signing manually (README.md, "Signing key").');
+    return;
+  }
+
+  src = src.replaceFirstMapped(androidBlock, (m) => '$loader${m.group(0)}');
+  src = src.replaceFirstMapped(buildTypes, (m) => '$signing${m.group(0)}');
+  src = src.replaceFirst(
+    debugSigning,
+    kotlin
+        ? 'signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")'
+        : 'signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug',
+  );
+
+  if (kotlin) {
+    src = 'import java.io.FileInputStream\nimport java.util.Properties\n\n$src';
+  }
+
+  file.writeAsStringSync(src);
+  _info('${file.path} patched: release builds use android/key.properties when present.');
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+String? _readOption(List<String> args, String name) {
+  for (var i = 0; i < args.length; i++) {
+    final a = args[i];
+    if (a == name && i + 1 < args.length) return args[i + 1];
+    if (a.startsWith('$name=')) return a.substring(name.length + 1);
   }
   return null;
 }
 
-Future<bool> _hasExecutable(String executable) async {
-  final result = await Process.run(
-    Platform.isWindows ? 'where' : 'which',
-    [executable],
-    runInShell: true,
-  );
-  return result.exitCode == 0;
+void _copyDir(Directory src, Directory dst) {
+  for (final entity in src.listSync(recursive: true, followLinks: false)) {
+    if (entity is! File) continue;
+    final rel = entity.path.substring(src.path.length + 1);
+    final out = File('${dst.path}${Platform.pathSeparator}$rel');
+    out.parent.createSync(recursive: true);
+    entity.copySync(out.path);
+  }
 }
 
-Future<void> _copyDirectory(Directory source, Directory destination) async {
-  await destination.create(recursive: true);
-  await for (final entity in source.list(recursive: true)) {
-    final relative = entity.path.substring(source.path.length + 1);
-    final targetPath =
-        '${destination.path}${Platform.pathSeparator}${relative.replaceAll('/', Platform.pathSeparator)}';
-    if (entity is File) {
-      await File(targetPath).parent.create(recursive: true);
-      await entity.copy(targetPath);
-    } else if (entity is Directory) {
-      await Directory(targetPath).create(recursive: true);
+Future<bool> _run(String cmd, List<String> args, {bool quiet = false}) async {
+  try {
+    final process = await Process.start(
+      cmd,
+      args,
+      runInShell: true,
+      mode: quiet ? ProcessStartMode.normal : ProcessStartMode.inheritStdio,
+    );
+    if (quiet) {
+      await Future.wait([process.stdout.drain<void>(), process.stderr.drain<void>()]);
     }
+    return (await process.exitCode) == 0;
+  } on ProcessException {
+    return false;
   }
 }
 
-Future<void> _configureGradle(Directory android, String applicationId) async {
-  final kts = File('${android.path}${Platform.pathSeparator}app${Platform.pathSeparator}build.gradle.kts');
-  final groovy = File('${android.path}${Platform.pathSeparator}app${Platform.pathSeparator}build.gradle');
+void _step(String message) => stdout.writeln('\n==> $message');
+void _info(String message) => stdout.writeln('    $message');
+void _warn(String message) => stdout.writeln('    [!] $message');
 
-  if (await kts.exists()) {
-    var text = await kts.readAsString();
-    text = text.replaceAll(
-      RegExp(r'applicationId\s*=\s*"[^"]*"'),
-      'applicationId = "$applicationId"',
-    );
-    text = text.replaceAll(
-      RegExp(r'applicationId\s*=\s*"[^\n]*'),
-      'applicationId = "$applicationId"',
-    );
-    text = text.replaceAll(
-      RegExp(r'namespace\s*=\s*"[^"]*"'),
-      'namespace = "$applicationId"',
-    );
-    text = text.replaceAll(
-      RegExp(r'targetSdk\s*=\s*[^\\n]+'),
-      'targetSdk = 36',
-    );
-    text = text.replaceAll(
-      RegExp(r'compileSdk\s*=\s*[^\\n]+'),
-      'compileSdk = 36',
-    );
-    text = text.replaceAll(
-      RegExp(r'minSdk\s*=\s*[^\\n]+'),
-      'minSdk = flutter.minSdkVersion',
-    );
-    await kts.writeAsString(text);
-  } else if (await groovy.exists()) {
-    var text = await groovy.readAsString();
-    text = text.replaceAll(
-      RegExp(r'applicationId\s*"[^"]*"'),
-      'applicationId "$applicationId"',
-    );
-    text = text.replaceAll(
-      RegExp(r'namespace\s*"[^"]*"'),
-      'namespace "$applicationId"',
-    );
-    text = text.replaceAll(
-      RegExp(r'targetSdk\s+[^\\n]+'),
-      'targetSdk 36',
-    );
-    text = text.replaceAll(
-      RegExp(r'compileSdk\s+[^\\n]+'),
-      'compileSdk 36',
-    );
-    text = text.replaceAll(
-      RegExp(r'minSdk\s+[^\\n]+'),
-      'minSdk flutter.minSdkVersion',
-    );
-    await groovy.writeAsString(text);
-  }
+Never _fail(String message) {
+  stderr.writeln('\nERROR: $message');
+  exit(1);
 }
