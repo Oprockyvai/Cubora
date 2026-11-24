@@ -1,43 +1,38 @@
-# Google Play store listing (English)
+# Google Play Store Listing (English)
 
-**App name** (max 30): `Cubora: Block Puzzle`
+**App name** (max 30): `Block Clash: Tactical Puzzle`
 
 **Short description** (max 80):
-`Drag, fit and crash neon blocks. Chain combos across magical puzzle worlds.`
+`Drag, fit and shatter crystal blocks. Chain combos across four tactile worlds.`
 
 **Full description** (max 4000):
 
 ```
-Drag. Fit. Crash. Chain.
+Drag. Fit. Clash. Chain.
 
-Cubora is a glowing, satisfying block puzzle for quick breaks and long sessions alike. Drop shapes onto the 8x8 board, complete rows and columns to crash them, and chain combos for huge scores - no wires, no waiting, fully offline.
+Block Clash is a tactile, jewel-crafted 8x8 block puzzle built for quick breaks and deep combo runs alike. Place beveled crystal blocks onto the slate board, clear full rows and columns to shatter tiles, and chain consecutive clears for multiplied scores — 100% offline, with zero ads and zero waiting.
 
-THREE WAYS TO PLAY
-- LEVELS: travel a map through four hand-painted worlds - Crystal Valley, Neon City, Lava Core and Quantum Realm. Every level has its own goal: reach a score, clear lines, collect treasures, place coloured blocks or chain a big combo. Earn up to 3 stars per level.
-- TIMER: race the clock in 90-second, 3-minute or 5-minute runs.
-- CLASSIC: endless play. Beat your best score, no pressure.
+THREE DISTINCT GAME MODES
+- LEVELS: Journey vertically across four illustrated realms — Crystal Valley, Neon City, Lava Core, and Quantum Realm. Tackle unique level goals (points, line clears, collectible relics, color targets, and combo streaks) with limited moves and up to 3 stars per stage.
+- TIMER RUSH: Race against 90-second, 3-minute, or 5-minute clocks. Every cleared line adds +2 seconds of bonus time!
+- CLASSIC ENDLESS: Pure 8x8 puzzle strategy at your own pace with 5 regenerating lives and gem revives to extend record runs.
 
-MADE TO FEEL GOOD
-- Smooth drag-and-drop with a glowing board, juicy crash effects, haptics and a calm synth soundtrack
-- Combo meter that rewards clever chains
-- Daily rewards, achievements, personal best boards and detailed stats
-- Collect gems and unlock new visual themes
-- Lives that refill over time - and you can use gems to keep a great run going
+BUILT FOR TACTILE FEEL
+- Crisp faceted blocks with distinct material themes (Aurora, Sunset Blaze, Deep Forest, and Ocean Glass)
+- Real-time placement ghost previews, clear-line previews, and instant invalid-drop feedback
+- Interactive 4-step visual guide, full Pause overlay, and customizable procedural synth music, sound effects, haptics, and reduced-motion accessibility
+- Daily login gem streaks, 10 local achievements, detailed lifetime statistics, and personal top-10 device scoreboards
 
-100% OFFLINE, 100% PRIVATE
-Play anywhere: on the bus, on a plane, with no signal. Cubora has no ads and collects no personal data.
-
-Download Cubora, and see how long your chain can get.
+100% OFFLINE & PRIVATE
+Play on flights, commutes, or anywhere without signal. Block Clash contains zero ads, requires no account, and never collects or transmits personal data.
 ```
 
-**Category:** Games > Puzzle  |  **Tags:** Puzzle, Casual, Offline, Block puzzle, Single player
-**Contact email:** your-email@example.com   |  **Website (optional):** -
+**Category:** Games > Puzzle  |  **Tags:** Puzzle, Block Puzzle, Casual, Offline, Single Player
+**Contact email:** support@example.com  |  **Website (optional):** -
 
-## Graphics to upload
-| Slot | File |
-|---|---|
-| App icon (512x512) | `play_icon_512.png` |
-| Feature graphic (1024x500) | `feature_graphic_1024x500.png` |
-| Phone screenshots (min 2, up to 8) | `screenshots/01_home.png` ... `04_themes.png` (1080x2160) |
-
-Tip: add 7-inch / 10-inch tablet screenshots later to improve the listing on tablets (optional).
+## Graphics Checklist
+| Slot | Required Spec | File | Status |
+|---|---|---|---|
+| App icon | 512x512 PNG | `store/play_icon_512.png` | Updated for Block Clash |
+| Feature graphic | 1024x500 PNG | `store/feature_graphic_1024x500.png` | Updated for Block Clash |
+| Phone screenshots | Min 2, max 8 | `store/screenshots/*` | Capture updated Block Clash screens from live build prior to Play submission |

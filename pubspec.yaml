@@ -1,5 +1,5 @@
 name: cubora
-description: Cubora - a neon block puzzle game.
+description: Block Clash - a tactile offline block puzzle game.
 publish_to: "none"
 
 # version: <name>+<build number>. Increase the build number (+1, +2 ...) for every Play Store upload.
@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  web: ^1.1.0
   webview_flutter: ^4.10.0
   webview_flutter_android: ^4.3.0
 

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0d1030">
 <title>Cubora</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 <style>
 :root{--bg:#0d1030;--bg2:#241468;--panel:#151a4c;--cell:#20266a;--text:#f2f4ff;--mut:#9aa2e0;--gold:#ffc94a;
 --c0:#f7768e;--c1:#56dff7;--c2:#f7b15d;--c3:#69e9a9;--c4:#f7df67;--c5:#b39bf7;color-scheme:dark;
@@ -600,7 +601,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
   <div class="tray" id="tray"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
   <p class="hint cap">Drag to place</p>
 </div>
-<div class="hscr" id="modes"><div class="hbg"></div><div class="hin">
+<div class="hscr" id="modes"><div class="hbg" style="position:absolute;inset:0;overflow:hidden"><svg id="d3-dust" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></svg></div><div class="hin" style="position:relative;z-index:1">
  <div class="htop"><button class="prof" id="hprof" aria-label="Profile"><span class="av" id="hav"></span><span class="pn"><b id="hname">Player</b><small id="hlvl">Level 1</small></span></button><div class="hrg"><div class="gem" id="hgems"><svg viewBox="0 0 24 24"><use href="#gemI"/></svg><b>0</b></div><button class="ib" id="hset" aria-label="Settings"><svg viewBox="0 0 24 24"><use href="#i-gear"/></svg></button></div></div>
  <div class="logo2"><svg viewBox="0 0 48 48"><use href="#cubeMark"/></svg><div class="wm">CUBORA<small>BLOCK PUZZLE</small></div></div>
  <div class="hero"><div class="hi" id="hhi"></div><div class="ho"><small id="hw">World 1</small><b id="hl">Level 1</b><div class="hst"><svg viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.8 1.6 7.1L12 17.6 5.6 21.3l1.6-7.1L1.8 9.4 9 8.6z"/></svg><span id="hstars">0 stars</span></div><button class="play" id="hplay"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>PLAY</button></div></div>
@@ -959,6 +960,91 @@ $('#giveup').addEventListener('click',()=>{$('#fail').classList.remove('on');con
     window.__np=false;
     try{if(AC){AC.resume();startMusic()}}catch(e){}
   };
+
+  /* D3 Home Screen Dust Particles */
+  try {
+    const svgSel = d3.select('#d3-dust');
+    if (!svgSel.empty()) {
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+      const numParticles = 55;
+      const particles = d3.range(numParticles).map(() => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 2.8 + 1,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22 - 0.07,
+        color: ['#56dff7', '#b39bf7', '#ffc94a', '#f7768e', '#69e9a9'][Math.floor(Math.random() * 5)],
+        opacity: Math.random() * 0.6 + 0.2
+      }));
+
+      const circles = svgSel.selectAll('circle')
+        .data(particles)
+        .join('circle')
+        .attr('r', d => d.r)
+        .attr('fill', d => d.color)
+        .attr('fill-opacity', d => d.opacity);
+
+      let mouseX = -1000, mouseY = -1000;
+      let tiltX = 0, tiltY = 0;
+
+      const modesEl = document.getElementById('modes');
+      if (modesEl) {
+        modesEl.addEventListener('mousemove', e => {
+          const rect = modesEl.getBoundingClientRect();
+          mouseX = e.clientX - rect.left;
+          mouseY = e.clientY - rect.top;
+        });
+        modesEl.addEventListener('touchmove', e => {
+          if (e.touches && e.touches.length > 0) {
+            const rect = modesEl.getBoundingClientRect();
+            mouseX = e.touches[0].clientX - rect.left;
+            mouseY = e.touches[0].clientY - rect.top;
+          }
+        }, {passive: true});
+        modesEl.addEventListener('mouseleave', () => {
+          mouseX = -1000;
+          mouseY = -1000;
+        });
+      }
+
+      window.addEventListener('deviceorientation', e => {
+        if (e.gamma !== null && e.beta !== null) {
+          tiltX = (e.gamma / 45) * 0.45;
+          tiltY = (e.beta / 45) * 0.45;
+        }
+      }, {passive: true});
+
+      d3.timer(() => {
+        if (!modesEl || !modesEl.classList.contains('on')) return;
+        width = modesEl.clientWidth || window.innerWidth;
+        height = modesEl.clientHeight || window.innerHeight;
+
+        particles.forEach(d => {
+          d.x += d.vx + tiltX;
+          d.y += d.vy + tiltY;
+
+          const dx = d.x - mouseX;
+          const dy = d.y - mouseY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120 && dist > 0) {
+            const force = (120 - dist) / 120;
+            d.x += (dx / dist) * force * 2.2;
+            d.y += (dy / dist) * force * 2.2;
+          }
+
+          if (d.x < -10) d.x = width + 10;
+          if (d.x > width + 10) d.x = -10;
+          if (d.y < -10) d.y = height + 10;
+          if (d.y > height + 10) d.y = -10;
+        });
+
+        circles
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
+      });
+    }
+  } catch(e) {}
 })();
 </script>
 </body>

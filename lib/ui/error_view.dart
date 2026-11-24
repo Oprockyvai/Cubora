@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 
-/// Shown only if the bundled game fails to load (should be very rare).
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.onRetry});
 
@@ -12,36 +11,73 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: CuboraTheme.backdrop),
-      child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: CuboraColors.panel,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: CuboraColors.violet.withValues(alpha: 0.45),
+              ),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 56, color: CuboraColors.pink),
-                const SizedBox(height: 16),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: CuboraColors.pink,
+                  size: 48,
+                ),
+                const SizedBox(height: 14),
                 const Text(
-                  'Something went wrong',
-                  style: TextStyle(color: CuboraColors.text, fontSize: 20, fontWeight: FontWeight.w800),
+                  'Unable to load Cubora',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: CuboraColors.text,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Cubora could not start. Please try again.',
+                  'Something interrupted the bundled game view. Try reloading.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: CuboraColors.muted, fontSize: 14),
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: onRetry,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: CuboraColors.gold,
-                    foregroundColor: const Color(0xFF2A1D00),
-                    minimumSize: const Size(180, 52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    textStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: .4),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: CuboraColors.muted,
                   ),
-                  child: const Text('TRY AGAIN'),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: CuboraTheme.goldButton,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: onRetry,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: const Color(0xFF2A1D00),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'RETRY',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

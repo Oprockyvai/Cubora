@@ -1,31 +1,27 @@
-# Play Console - suggested answers
+# Play Console — Suggested Answers (Block Clash)
 
-Always check the forms yourself: Google's questions change, and you are the one who confirms them.
+Always verify every Play Console form question yourself before final submission.
 
-## Store settings
-* App or game: **Game** - Category **Puzzle** - Free.
+## Store Settings
+* App or game: **Game** — Category **Puzzle** — Free.
 
-## App content
-| Section | Suggested answer |
+## App Content
+| Section | Suggested Answer |
 |---|---|
-| Privacy policy | URL of your hosted `privacy_policy.html` |
+| Privacy policy | Host and link `store/privacy_policy.html` on a public HTTPS URL |
 | Ads | **No, my app does not contain ads** |
-| App access | All functionality available without login / special access |
-| Target audience | **13+** (or 18+). Choosing "under 13" triggers the stricter Families policy - only do this on purpose |
-| Content rating (IARC) | Answer honestly: no violence, no blood, no sexual content, no profanity, no gambling, no user-generated content, no sharing of location. Expected result: **Everyone / PEGI 3** |
-| News app / COVID / Government | No |
-| Financial features / Health | No |
+| App access | All functionality is available without sign-in or special access |
+| Target audience | **13+** (or **18+**); choosing under-13 triggers Google Play Families policies |
+| Content rating (IARC) | No violence, blood, sexual content, profanity, gambling, UGC, or location sharing -> Expected: **Everyone / PEGI 3** |
+| News / COVID / Government / Financial / Health | **No** |
 
-## Data safety
-* Does your app collect or share any of the required user data types? **No**
-  (Cubora has no network access; game progress is stored only on the device and never leaves it.)
-* Data encrypted in transit / deletion request: not applicable when no data is collected.
-* If you later add ads, analytics, crash reporting or cloud save, update this form **and** the privacy policy before releasing.
+## Data Safety
+* Does your app collect or share any user data types? **No**
+  (Block Clash runs 100% offline with zero network calls; scores, settings, profile name/avatar, gems, and progress stay solely in local device storage.)
+* Advertising ID declaration: Not used (**No**).
+* In-app purchases: None.
+* Special Android permissions: None required.
 
-## Declarations
-* In-app purchases: none. Permissions: none. Advertising ID: not used (select "No" when asked).
-* Government apps / Financial / Health: No.
-
-## Release
-* Production release uses the `.aab` from `flutter build appbundle --release`.
-* New personal developer accounts: complete the closed test (12 testers, 14 days) first - see README.
+## Android Release Build Notes
+* Target SDK: Configure Android packaging (`targetSdk` >= 35 / current Google Play policy requirement) with an immutable upload keystore (`key.properties`) kept outside source control.
+* Note on Web-Container Environment: In environments without Flutter/Android SDK installed, build the verified production web bundle via `npm run build` (`dist/`) and package the `.aab` using your local Android Studio / Capacitor / Flutter-Android SDK toolchain before uploading to Play Console.

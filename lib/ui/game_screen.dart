@@ -11,8 +11,11 @@ import '../core/theme.dart';
 import 'error_view.dart';
 import 'exit_dialog.dart';
 import 'loading_cover.dart';
+import 'web_game_frame_stub.dart'
+    if (dart.library.js_interop) 'web_game_frame_web.dart';
 
-/// Hosts the Cubora game (bundled HTML5, fully offline) inside a native shell.
+/// Hosts the Cubora game (bundled HTML5, fully offline) inside a native shell,
+/// with a web iframe fallback when running in Flutter Web preview.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -23,16 +26,20 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   static const String _entry = 'assets/game/index.html';
 
-  late final WebViewController _web;
+  WebViewController? _web;
   bool _ready = false;
   bool _failed = false;
+  int _webReloadKey = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _web = _createController();
-    unawaited(_web.loadFlutterAsset(_entry));
+    if (!kIsWeb) {
+      final controller = _createController();
+      _web = controller;
+      unawaited(controller.loadFlutterAsset(_entry));
+    }
   }
 
   @override
@@ -84,18 +91,23 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     setState(() {
       _failed = false;
       _ready = false;
+      _webReloadKey++;
     });
-    unawaited(_web.loadFlutterAsset(_entry));
+    if (!kIsWeb && _web != null) {
+      unawaited(_web!.loadFlutterAsset(_entry));
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _web;
+    if (controller == null) return;
     switch (state) {
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
-        unawaited(GameBridge.pause(_web)); // stop music + timers in background
+        unawaited(GameBridge.pause(controller)); // stop music + timers in background
       case AppLifecycleState.resumed:
-        unawaited(GameBridge.resume(_web));
+        unawaited(GameBridge.resume(controller));
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         break;
@@ -103,8 +115,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _onBack() async {
-    final consumed = await GameBridge.back(_web);
-    if (consumed || !mounted) return;
+    final controller = _web;
+    if (controller != null) {
+      final consumed = await GameBridge.back(controller);
+      if (consumed || !mounted) return;
+    }
+    if (!mounted) return;
     final quit = await showExitDialog(context);
     if (quit) await SystemNavigator.pop();
   }
@@ -124,7 +140,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             const DecoratedBox(
               decoration: BoxDecoration(gradient: CuboraTheme.backdrop),
             ),
-            SafeArea(child: WebViewWidget(controller: _web)),
+            SafeArea(
+              child: kIsWeb
+                  ? KeyedSubtree(
+                      key: ValueKey(_webReloadKey),
+                      child: buildWebGameFrame(
+                        assetPath: _entry,
+                        onReady: () {
+                          if (mounted) setState(() => _ready = true);
+                        },
+                        onError: () {
+                          if (mounted) setState(() => _failed = true);
+                        },
+                      ),
+                    )
+                  : WebViewWidget(controller: _web!),
+            ),
             if (_failed) ErrorView(onRetry: _reload),
             LoadingCover(visible: !_ready && !_failed),
           ],

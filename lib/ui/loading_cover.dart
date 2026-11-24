@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 
-/// Branded cover shown while the WebView boots. It matches the native Android
-/// launch screen (same backdrop, same logo position) so the hand-over from
-/// system splash -> Flutter -> game is seamless.
 class LoadingCover extends StatelessWidget {
   const LoadingCover({super.key, required this.visible});
 
@@ -16,16 +13,31 @@ class LoadingCover extends StatelessWidget {
       ignoring: !visible,
       child: AnimatedOpacity(
         opacity: visible ? 1 : 0,
-        duration: const Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 280),
         curve: Curves.easeOut,
-        child: const DecoratedBox(
-          decoration: BoxDecoration(gradient: CuboraTheme.backdrop),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: CuboraTheme.backdrop),
           child: Center(
-            child: Image(
-              image: AssetImage('assets/branding/logo.png'),
-              width: 168,
-              height: 168,
-              filterQuality: FilterQuality.medium,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/branding/logo.png',
+                  width: 88,
+                  height: 88,
+                  filterQuality: FilterQuality.high,
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'CUBORA',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 4,
+                    color: CuboraColors.text,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
