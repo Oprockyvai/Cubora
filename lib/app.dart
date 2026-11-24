@@ -11,7 +11,7 @@ class CuboraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cubora',
       debugShowCheckedModeBanner: false,
-      theme: cuboraTheme,
+      theme: CuboraTheme.dark,
       home: const GameScreen(),
     );
   }
