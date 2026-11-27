@@ -29,7 +29,7 @@ class LoadingCover extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'CUBORA',
+                  'BLOCK CLASH',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,

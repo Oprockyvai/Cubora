@@ -81,3 +81,79 @@ export function shouldTickGameplayClock(params: {
   }
   return params.inGame;
 }
+
+export type ComboTier = 'idle' | 'warm' | 'hot' | 'blazing';
+
+export interface ComboHudState {
+  streak: number;
+  isActive: boolean;
+  tier: ComboTier;
+  fillPct: number;
+  label: string;
+  badgeText: string;
+}
+
+/**
+ * Pure helper computing Combo HUD visual tier, progress fill percentage, and label.
+ */
+export function getComboHudState(streak: number): ComboHudState {
+  const safeStreak = Math.max(0, Math.floor(streak || 0));
+  const fillPct = (Math.min(safeStreak, 6) / 6) * 100;
+  const tier: ComboTier =
+    safeStreak >= 4
+      ? 'blazing'
+      : safeStreak >= 2
+      ? 'hot'
+      : safeStreak >= 1
+      ? 'warm'
+      : 'idle';
+
+  return {
+    streak: safeStreak,
+    isActive: safeStreak > 0,
+    tier,
+    fillPct,
+    label: safeStreak > 0 ? `Combo x${safeStreak}` : 'Combo',
+    badgeText: safeStreak > 0 ? `x${safeStreak}` : '',
+  };
+}
+
+/**
+ * Returns true whenever the gameplay streak count strictly increases from a previous turn.
+ */
+export function didStreakIncrease(
+  prevStreak: number,
+  nextStreak: number
+): boolean {
+  const prev = Math.max(0, Math.floor(prevStreak || 0));
+  const next = Math.max(0, Math.floor(nextStreak || 0));
+  return next > prev && next > 0;
+}
+
+export interface CellCenterPercent {
+  row: number;
+  col: number;
+  xPct: number;
+  yPct: number;
+}
+
+/**
+ * Computes exact percentage coordinates for an overlay centered on a board cell.
+ */
+export function getBoardCellCenterPercent(
+  cellIdx: number,
+  gridSize: number = GRID_SIZE
+): CellCenterPercent {
+  const total = gridSize * gridSize;
+  const safeIdx = Math.max(0, Math.min(total - 1, Math.floor(cellIdx)));
+  const row = Math.floor(safeIdx / gridSize);
+  const col = safeIdx % gridSize;
+  return {
+    row,
+    col,
+    xPct: ((col + 0.5) / gridSize) * 100,
+    yPct: ((row + 0.5) / gridSize) * 100,
+  };
+}
+
+

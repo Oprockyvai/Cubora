@@ -67,35 +67,93 @@ export const SharedSvgDefs: React.FC = () => (
         </React.Fragment>
       ))}
       <linearGradient id="mkG" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#fff0a0" />
-        <stop offset=".5" stopColor="#e0a000" />
-        <stop offset="1" stopColor="#7a4f00" />
+        <stop offset="0" stopColor="#fffbd1" />
+        <stop offset=".35" stopColor="#ffd352" />
+        <stop offset=".75" stopColor="#e6910a" />
+        <stop offset="1" stopColor="#8c4e00" />
       </linearGradient>
       <linearGradient id="mkS" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#f4f6fa" />
-        <stop offset=".5" stopColor="#9aa0aa" />
-        <stop offset="1" stopColor="#4a4f58" />
+        <stop offset="0" stopColor="#ffffff" />
+        <stop offset=".42" stopColor="#dce6f8" />
+        <stop offset=".8" stopColor="#8c9cb8" />
+        <stop offset="1" stopColor="#4c5978" />
       </linearGradient>
       <linearGradient id="mkS2" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#b9bdc7" />
-        <stop offset=".5" stopColor="#6b707b" />
-        <stop offset="1" stopColor="#2e3138" />
+        <stop offset="0" stopColor="#eef3ff" />
+        <stop offset=".45" stopColor="#a7b6d9" />
+        <stop offset="1" stopColor="#47557a" />
       </linearGradient>
-      <radialGradient id="mkB" cx=".35" cy=".28" r=".9">
-        <stop offset="0" stopColor="#a8d8ff" />
-        <stop offset=".5" stopColor="#2d7bff" />
-        <stop offset="1" stopColor="#0a2a86" />
+      <radialGradient id="mkB" cx=".32" cy=".25" r=".86">
+        <stop offset="0" stopColor="#b5f6ff" />
+        <stop offset=".42" stopColor="#26b4ff" />
+        <stop offset=".82" stopColor="#0f64d6" />
+        <stop offset="1" stopColor="#083287" />
       </radialGradient>
-      <radialGradient id="mkP" cx=".35" cy=".28" r=".9">
-        <stop offset="0" stopColor="#e8bfff" />
-        <stop offset=".5" stopColor="#9b4dff" />
-        <stop offset="1" stopColor="#3d0f8a" />
+      <radialGradient id="mkP" cx=".32" cy=".25" r=".86">
+        <stop offset="0" stopColor="#ffd1f0" />
+        <stop offset=".42" stopColor="#ff4a96" />
+        <stop offset=".82" stopColor="#c91868" />
+        <stop offset="1" stopColor="#7a063c" />
       </radialGradient>
-      <radialGradient id="mkD" cx=".35" cy=".28" r=".9">
-        <stop offset="0" stopColor="#70707a" />
-        <stop offset=".55" stopColor="#2a2a30" />
-        <stop offset="1" stopColor="#0b0b0f" />
+      <radialGradient id="mkD" cx=".32" cy=".25" r=".88">
+        <stop offset="0" stopColor="#a9bae6" />
+        <stop offset=".48" stopColor="#5e71a1" />
+        <stop offset="1" stopColor="#2d395c" />
       </radialGradient>
+      {/* Rich glossy gradients for Power-Up Tool Artwork */}
+      <linearGradient id="puHammerMetal" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#fff6d6" />
+        <stop offset=".35" stopColor="#ffc94d" />
+        <stop offset=".75" stopColor="#e87917" />
+        <stop offset="1" stopColor="#8c3200" />
+      </linearGradient>
+      <linearGradient id="puHammerCap" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#eef5ff" />
+        <stop offset=".5" stopColor="#9ab2dc" />
+        <stop offset="1" stopColor="#45557a" />
+      </linearGradient>
+      <linearGradient id="puHammerWood" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#f3b26a" />
+        <stop offset=".55" stopColor="#b85e24" />
+        <stop offset="1" stopColor="#592408" />
+      </linearGradient>
+      <radialGradient id="puBoomOrb" cx=".34" cy=".28" r=".78">
+        <stop offset="0" stopColor="#8f9ec9" />
+        <stop offset=".35" stopColor="#323d66" />
+        <stop offset=".78" stopColor="#161b36" />
+        <stop offset="1" stopColor="#090c1c" />
+      </radialGradient>
+      <linearGradient id="puBoomCore" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ffe77a" />
+        <stop offset=".5" stopColor="#ff6640" />
+        <stop offset="1" stopColor="#cc123f" />
+      </linearGradient>
+      <linearGradient id="puRefreshEmerald" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#b8ffe5" />
+        <stop offset=".45" stopColor="#3de69c" />
+        <stop offset="1" stopColor="#0a8554" />
+      </linearGradient>
+      <linearGradient id="puUndoSky" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#d6f7ff" />
+        <stop offset=".45" stopColor="#34d3ff" />
+        <stop offset="1" stopColor="#0d6ec2" />
+      </linearGradient>
+      <radialGradient id="puHintBulb" cx=".42" cy=".32" r=".72">
+        <stop offset="0" stopColor="#ffffff" />
+        <stop offset=".4" stopColor="#fff085" />
+        <stop offset=".85" stopColor="#ffae24" />
+        <stop offset="1" stopColor="#cc6200" />
+      </radialGradient>
+      <linearGradient id="puPrismOuter" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ff7aa8" />
+        <stop offset=".5" stopColor="#c77dff" />
+        <stop offset="1" stopColor="#34d3ff" />
+      </linearGradient>
+      <linearGradient id="puPrismInner" x1="1" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff6c4" />
+        <stop offset=".55" stopColor="#ff9de2" />
+        <stop offset="1" stopColor="#75e7ff" />
+      </linearGradient>
     </defs>
   </svg>
 );
@@ -213,6 +271,30 @@ export const StarIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+export const FlameIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <defs>
+      <linearGradient id="flmG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff3a8" />
+        <stop offset="0.45" stopColor="#ffae2b" />
+        <stop offset="1" stopColor="#ff4624" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M12.6 2.2c.3 3.4-1.5 5.2-3.2 7-1.6 1.7-2.9 3.2-2.9 5.8a5.5 5.5 0 0011 0c0-2.5-1.3-4.6-2.8-6.4-.3 1.4-1.1 2.2-1.9 2.5.7-2.2 1-5.6-.2-8.9z"
+      fill="url(#flmG)"
+      stroke="#fff2c2"
+      strokeWidth="0.9"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 11.8c1.5 1.4 2.2 2.6 2.2 4a2.2 2.2 0 11-4.4 0c0-1.3.7-2.5 2.2-4z"
+      fill="#fffbe0"
+      fillOpacity="0.88"
+    />
+  </svg>
+);
+
 export const HeartIcon: React.FC<{ on: boolean; className?: string }> = ({
   on,
   className = '',
@@ -246,13 +328,21 @@ export const HeartIcon: React.FC<{ on: boolean; className?: string }> = ({
 
 export const LockIcon: React.FC<{ className?: string }> = ({ className = 'lk' }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="5" y="11" width="14" height="10" rx="2" />
-    <path d="M8 11V8a4 4 0 018 0v3" />
+    <path
+      d="M8.2 10.6V7.8a3.8 3.8 0 017.6 0v2.8"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+    />
+    <rect x="5" y="10.2" width="14" height="10.4" rx="2.8" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="14.6" r="1.45" fill="var(--lk-hole, #12172c)" stroke="none" />
+    <rect x="11.25" y="15.2" width="1.5" height="2.6" rx="0.7" fill="var(--lk-hole, #12172c)" stroke="none" />
   </svg>
 );
 
-export const CheckIcon: React.FC = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
+export const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
     <path d="M5 12.5l4.5 4.5L19 7.5" />
   </svg>
 );
@@ -583,7 +673,7 @@ export const MapGemSvg: React.FC<{ kind: 'b' | 'p' | 'd'; ms: boolean }> = ({
       <path
         key={i}
         d={d}
-        fill={i % 2 ? 'rgba(255,255,255,.2)' : 'rgba(0,10,60,.22)'}
+        fill={i % 2 ? 'rgba(255,255,255,.22)' : 'rgba(6,12,48,.24)'}
       />
     );
   }
@@ -593,49 +683,481 @@ export const MapGemSvg: React.FC<{ kind: 'b' | 'p' | 'd'; ms: boolean }> = ({
       {ms ? (
         <>
           <rect
-            x="19"
-            y="19"
-            width="62"
-            height="62"
-            rx="9"
+            x="16"
+            y="16"
+            width="68"
+            height="68"
+            rx="12"
             transform="rotate(45 50 50)"
             fill={`url(#${rc})`}
+            stroke="rgba(255,255,255,0.58)"
+            strokeWidth="1.5"
           />
           <rect
-            x="27"
-            y="27"
-            width="46"
-            height="46"
-            rx="6"
+            x="22.5"
+            y="22.5"
+            width="55"
+            height="55"
+            rx="8.5"
+            transform="rotate(45 50 50)"
+            fill="none"
+            stroke="rgba(16,18,38,0.38)"
+            strokeWidth="1.6"
+          />
+          <rect
+            x="26.5"
+            y="26.5"
+            width="47"
+            height="47"
+            rx="6.5"
             transform="rotate(45 50 50)"
             fill={`url(#${gc})`}
-            stroke="rgba(0,0,0,.35)"
+            stroke="rgba(0,0,0,.44)"
             strokeWidth="1.2"
+          />
+          <rect
+            x="32"
+            y="32"
+            width="36"
+            height="36"
+            rx="4"
+            transform="rotate(45 50 50)"
+            fill="none"
+            stroke="rgba(255,255,255,0.28)"
+            strokeWidth="1"
           />
         </>
       ) : (
         <>
-          <circle cx="50" cy="50" r="48" fill={`url(#${rc})`} />
+          <circle
+            cx="50"
+            cy="50"
+            r="48.2"
+            fill={`url(#${rc})`}
+            stroke="rgba(255,255,255,0.56)"
+            strokeWidth="1.6"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="43.5"
+            fill="none"
+            stroke="rgba(14,18,40,0.42)"
+            strokeWidth="1.7"
+          />
           <circle
             cx="50"
             cy="50"
             r="40.5"
             fill={`url(#${gc})`}
-            stroke="rgba(0,0,0,.35)"
+            stroke="rgba(0,0,0,.44)"
             strokeWidth="1.2"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="32.5"
+            fill="none"
+            stroke="rgba(255,255,255,0.22)"
+            strokeWidth="1"
+          />
+          <path
+            d="M 19 36 A 35 35 0 0 1 73 20"
+            fill="none"
+            stroke="rgba(255,255,255,0.68)"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 28 77 A 33 33 0 0 0 74 72"
+            fill="none"
+            stroke={kind === 'd' ? 'rgba(176,204,255,0.34)' : 'rgba(255,244,196,0.42)'}
+            strokeWidth="1.6"
+            strokeLinecap="round"
           />
         </>
       )}
       {facets}
+      {kind === 'd' && !ms && (
+        <path
+          d="M 24 68 L 68 24"
+          stroke="rgba(220,234,255,0.2)"
+          strokeWidth="9"
+          strokeLinecap="round"
+        />
+      )}
       <ellipse
         cx={ms ? 44 : 36}
         cy={ms ? 36 : 29}
-        rx={ms ? 9 : 12}
-        ry={ms ? 5 : 6.5}
+        rx={ms ? 9.5 : 13.5}
+        ry={ms ? 5 : 6.6}
         fill="#fff"
-        fillOpacity=".55"
+        fillOpacity={kind === 'd' ? '.36' : '.62'}
         transform={`rotate(-30 ${ms ? 44 : 36} ${ms ? 36 : 29})`}
+      />
+      <circle
+        cx={ms ? 61 : 67}
+        cy={ms ? 61 : 68}
+        r={2.5}
+        fill="#fff"
+        fillOpacity={kind === 'd' ? '0.24' : '0.38'}
       />
     </svg>
   );
 };
+
+export const HammerIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg
+    className={`pu-art pu-art-hammer ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    <g className="pu-anim-hammer">
+      {/* Wooden Handle */}
+      <path
+        d="M17.2 15.8l3 3-11.2 11.2a2.1 2.1 0 01-3 0l-.2-.2a2.1 2.1 0 010-3z"
+        fill="url(#puHammerWood)"
+        stroke="#2a1103"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 27.6l9.8-9.8"
+        stroke="rgba(255,226,184,0.45)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      {/* Brass Collar */}
+      <rect
+        x="16.4"
+        y="12.6"
+        width="5.2"
+        height="4.4"
+        rx="1.2"
+        transform="rotate(45 19 14.8)"
+        fill="url(#puHammerCap)"
+        stroke="#1b2442"
+        strokeWidth="1"
+      />
+      {/* Heavy Forged Mallet Head */}
+      <path
+        d="M14.2 5.4c.8-.8 2.1-.8 2.9 0l11.5 11.5c.8.8.8 2.1 0 2.9l-2.8 2.8c-.8.8-2.1.8-2.9 0L11.4 11.1c-.8-.8-.8-2.1 0-2.9z"
+        fill="url(#puHammerMetal)"
+        stroke="#2c1200"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      {/* Steel Strike Face */}
+      <path
+        d="M24.2 13.8l4.4 4.4-2.2 2.2-4.4-4.4z"
+        fill="url(#puHammerCap)"
+        stroke="#1b2442"
+        strokeWidth="0.9"
+        strokeLinejoin="round"
+      />
+      {/* Specular Gloss */}
+      <path
+        d="M14.5 7.4l7.6 7.6"
+        stroke="rgba(255,255,255,0.68)"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </g>
+    {/* Subtle Spark Star */}
+    <path
+      className="pu-anim-glint"
+      d="M28.5 5.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"
+      fill="#fff4ad"
+    />
+  </svg>
+);
+
+export const BoomIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg
+    className={`pu-art pu-art-boom ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    {/* Braided Fuse */}
+    <path
+      d="M21.5 10.8c1.6-2.5 3.6-3.7 6.2-3.4"
+      fill="none"
+      stroke="#d9a15b"
+      strokeWidth="2.3"
+      strokeLinecap="round"
+    />
+    {/* Brass Fuse Cap */}
+    <rect
+      x="17.8"
+      y="8.6"
+      width="6"
+      height="4"
+      rx="1.2"
+      transform="rotate(28 20.8 10.6)"
+      fill="url(#puHammerMetal)"
+      stroke="#231204"
+      strokeWidth="1"
+    />
+    {/* Bomb Iron Sphere */}
+    <circle
+      cx="15.4"
+      cy="21.4"
+      r="10.4"
+      fill="url(#puBoomOrb)"
+      stroke="#090d1f"
+      strokeWidth="1.4"
+    />
+    {/* Danger Core Ring & Flame Emblem */}
+    <circle
+      cx="15.4"
+      cy="21.4"
+      r="5.2"
+      fill="url(#puBoomCore)"
+      opacity="0.92"
+    />
+    <path
+      d="M15.4 17.6l1.3 2.5 2.7.4-2 1.9.5 2.7-2.5-1.3-2.5 1.3.5-2.7-2-1.9 2.7-.4z"
+      fill="#fff7c2"
+    />
+    {/* Gloss Highlight */}
+    <ellipse
+      cx="11.4"
+      cy="16.2"
+      rx="3.1"
+      ry="1.7"
+      transform="rotate(-34 11.4 16.2)"
+      fill="rgba(255,255,255,0.52)"
+    />
+    {/* Animated Fuse Spark */}
+    <g className="pu-anim-spark">
+      <circle cx="28.4" cy="7.4" r="3.4" fill="rgba(255,140,40,0.45)" />
+      <path
+        d="M28.4 2.8l1.1 3.4 3.4 1.2-3.4 1.1-1.1 3.4-1.2-3.4-3.4-1.1 3.4-1.2z"
+        fill="#fff39e"
+      />
+    </g>
+  </svg>
+);
+
+export const ToolRefreshIcon: React.FC<{ className?: string }> = ({
+  className = '',
+}) => (
+  <svg
+    className={`pu-art pu-art-refresh ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    <g className="pu-anim-orbit">
+      <path
+        d="M9.2 13.5A10.2 10.2 0 0125.6 9.6l1.9-1.9.8 7-7-.8 2-2a7.2 7.2 0 00-11.2 2.9z"
+        fill="url(#puRefreshEmerald)"
+        stroke="#053824"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M26.8 22.5a10.2 10.2 0 01-16.4 3.9l-1.9 1.9-.8-7 7 .8-2 2a7.2 7.2 0 0011.2-2.9z"
+        fill="url(#puUndoSky)"
+        stroke="#072c4d"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+    </g>
+    {/* Glowing Cube Core */}
+    <rect
+      x="14.2"
+      y="14.2"
+      width="7.6"
+      height="7.6"
+      rx="2"
+      transform="rotate(45 18 18)"
+      fill="url(#puRefreshEmerald)"
+      stroke="#d4fff0"
+      strokeWidth="1.1"
+    />
+  </svg>
+);
+
+export const UndoIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg
+    className={`pu-art pu-art-undo ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    {/* Ambient Time Halo */}
+    <circle
+      cx="18"
+      cy="18"
+      r="13.5"
+      fill="rgba(52,211,255,0.1)"
+      stroke="rgba(128,232,255,0.28)"
+      strokeWidth="1.2"
+    />
+    <g className="pu-anim-undo">
+      <path
+        d="M14.4 7.4L5.6 15l8.8 7.6v-4.5h5.8a5.4 5.4 0 010 10.8H15v4.2h5.2a9.6 9.6 0 000-19.2h-5.8z"
+        fill="url(#puUndoSky)"
+        stroke="#06284d"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12.6 11.3L8.3 15l4.3 3.7"
+        fill="none"
+        stroke="rgba(255,255,255,0.58)"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  </svg>
+);
+
+export const HintIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg
+    className={`pu-art pu-art-hint ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    {/* Radiant Halo Rays */}
+    <g className="pu-anim-rays" stroke="#ffe57f" strokeWidth="2" strokeLinecap="round">
+      <path d="M18 3.2v2.4M7.2 8.2l1.8 1.8M28.8 8.2l-1.8 1.8M4.6 16.8H7M29 16.8h2.4" />
+    </g>
+    {/* Bulb Glass */}
+    <path
+      d="M18 7.5a9 9 0 00-6 15.7c1.1 1 1.8 2.2 2 3.8h8c.2-1.6.9-2.8 2-3.8a9 9 0 00-6-15.7z"
+      fill="url(#puHintBulb)"
+      stroke="#5c2800"
+      strokeWidth="1.25"
+      strokeLinejoin="round"
+    />
+    {/* Filament */}
+    <path
+      d="M14.6 17.6l1.7-2.4 1.7 2.4 1.7-2.4 1.7 2.4M18 26.8v-7.2"
+      fill="none"
+      stroke="#fffdf0"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Metal Socket Base */}
+    <rect
+      x="13.5"
+      y="27"
+      width="9"
+      height="3.2"
+      rx="1.4"
+      fill="url(#puHammerCap)"
+      stroke="#1e2747"
+      strokeWidth="1"
+    />
+    <rect
+      x="14.8"
+      y="30.2"
+      width="6.4"
+      height="2.6"
+      rx="1.3"
+      fill="url(#puHammerMetal)"
+      stroke="#2c1200"
+      strokeWidth="0.9"
+    />
+  </svg>
+);
+
+export const ColorBlastIcon: React.FC<{ className?: string }> = ({
+  className = '',
+}) => (
+  <svg
+    className={`pu-art pu-art-prism ${className}`.trim()}
+    viewBox="0 0 36 36"
+    aria-hidden="true"
+  >
+    <g className="pu-anim-prism">
+      {/* Outer 8-point Starburst */}
+      <path
+        d="M18 2.8l3.5 9.6 10 1.4-7.4 6.8 1.9 9.9L18 25.6 10 30.5l1.9-9.9-7.4-6.8 10-1.4z"
+        fill="url(#puPrismOuter)"
+        stroke="#200d3d"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      {/* Inner Facet */}
+      <path
+        d="M18 7.8l2.1 5.8 6.1.9-4.5 4.1 1.2 6-4.9-2.8-4.9 2.8 1.2-6-4.5-4.1 6.1-.9z"
+        fill="url(#puPrismInner)"
+        opacity="0.9"
+      />
+    </g>
+    {/* Core Gem */}
+    <circle
+      cx="18"
+      cy="17.8"
+      r="3.2"
+      fill="#ffffff"
+      stroke="#8d3dff"
+      strokeWidth="1.2"
+    />
+  </svg>
+);
+
+export const PowerUpIcon: React.FC<{
+  id: 'hammer' | 'boom' | 'refresh' | 'undo' | 'hint' | 'colorBlast';
+  className?: string;
+}> = ({ id, className }) => {
+  switch (id) {
+    case 'hammer':
+      return <HammerIcon className={className} />;
+    case 'boom':
+      return <BoomIcon className={className} />;
+    case 'refresh':
+      return <ToolRefreshIcon className={className} />;
+    case 'undo':
+      return <UndoIcon className={className} />;
+    case 'hint':
+      return <HintIcon className={className} />;
+    case 'colorBlast':
+      return <ColorBlastIcon className={className} />;
+  }
+};
+
+export const MissionIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="4" y="4" width="16" height="16" rx="3.5" fill="none" stroke="currentColor" strokeWidth="1.9" />
+    <path d="M8.5 12.2l2.4 2.4 4.8-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const BoltIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M13.2 2.5L5.5 13h5.7l-.4 8.5 7.7-10.5h-5.7z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export const SoundPackIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M9 17.5V6.5l10-2v11" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="6.5" cy="17.5" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.9" />
+    <circle cx="16.5" cy="15.5" r="2.5" fill="none" stroke="currentColor" strokeWidth="1.9" />
+  </svg>
+);
+
+export const HistoryIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M3 12a9 9 0 103.1-6.8L3 8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 3.5V8h4.5M12 7.5V12l3 2" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const ShieldChallengeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 3l7.5 3.2v5.4c0 4.6-3.2 8.4-7.5 9.9-4.3-1.5-7.5-5.3-7.5-9.9V6.2z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+    <path d="M9.5 12l2 2 3.5-3.8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+

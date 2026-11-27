@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 /// Brand palette - taken 1:1 from the game's CSS variables so the native
 /// shell and the game look like one product.
 abstract final class CuboraColors {
-  static const Color bg = Color(0xFF0D1030);
-  static const Color bg2 = Color(0xFF241468);
-  static const Color panel = Color(0xFF151A4C);
-  static const Color text = Color(0xFFF2F4FF);
-  static const Color muted = Color(0xFF9AA2E0);
-  static const Color gold = Color(0xFFFFC94A);
-  static const Color violet = Color(0xFFB39BF7);
-  static const Color cyan = Color(0xFF56DFF7);
-  static const Color pink = Color(0xFFF7768E);
+  static const Color bg = Color(0xFF090E1D);
+  static const Color bg2 = Color(0xFF141C38);
+  static const Color panel = Color(0xFF11182F);
+  static const Color text = Color(0xFFF3F6FF);
+  static const Color muted = Color(0xFF99A6CF);
+  static const Color gold = Color(0xFFFFC845);
+  static const Color violet = Color(0xFF9A85FF);
+  static const Color cyan = Color(0xFF34D3FF);
+  static const Color pink = Color(0xFFFF5D7A);
 }
 
 abstract final class CuboraTheme {

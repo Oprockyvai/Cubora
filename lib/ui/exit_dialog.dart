@@ -14,7 +14,7 @@ Future<bool> showExitDialog(BuildContext context) async {
         ),
       ),
       title: const Text(
-        'Quit Cubora?',
+        'Quit Block Clash?',
         style: TextStyle(
           color: CuboraColors.text,
           fontWeight: FontWeight.w800,

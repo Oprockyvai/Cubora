@@ -4,13 +4,27 @@ import {
   MAX_LIVES,
   TIMER_DURATIONS,
 } from '../data/constants';
-import { GameMode, LevelDef, LevelProgress, SaveState } from '../types/game';
+import {
+  AchievementDef,
+  GameMode,
+  LevelDef,
+  LevelProgress,
+  MatchHistoryEntry,
+  SaveState,
+} from '../types/game';
 import { describeLevel, makeLevel } from '../utils/levelLogic';
-import { formatClock, getDailyRewardState } from '../utils/storage';
+import { formatModeLabel } from '../utils/progressionManager';
+import { formatClock, formatDuration, getDailyRewardState } from '../utils/storage';
+import {
+  getWinStreakHudProgress,
+  getWinStreakInfo,
+  WIN_STREAK_MILESTONES,
+} from '../utils/streakLogic';
 import {
   AvatarSvg,
   BigOrbitLogo,
   CheckIcon,
+  FlameIcon,
   GemIcon,
   HelpIcon,
   ItemSvg,
@@ -76,6 +90,9 @@ interface ModalsProps {
     score: number;
     movesLeft: number;
     lbRank: number;
+    winStreak: number;
+    streakBonusGems: number;
+    starGems: number;
   };
   onNextLevel: () => void;
   onWinToMap: () => void;
@@ -107,6 +124,12 @@ interface ModalsProps {
   };
   onOverPlay: () => void;
   onOverMenu: () => void;
+
+  // Achievement detail & Match detail modals
+  selectedAchievement: AchievementDef | null;
+  onCloseAchievementDetail: () => void;
+  selectedHistory: MatchHistoryEntry | null;
+  onCloseHistoryDetail: () => void;
 
   onInteract: () => void;
 }
@@ -162,6 +185,10 @@ export const Modals: React.FC<ModalsProps> = ({
   overState,
   onOverPlay,
   onOverMenu,
+  selectedAchievement,
+  onCloseAchievementDetail,
+  selectedHistory,
+  onCloseHistoryDetail,
   onInteract,
 }) => {
   const [draftName, setDraftName] = useState(cb.name);
@@ -193,6 +220,8 @@ export const Modals: React.FC<ModalsProps> = ({
       : pauseContext.mode === 'timer'
       ? `Timer · ${formatClock(pauseContext.timeLeft)} left`
       : `Level ${pauseContext.levelNum || prog.u}`;
+
+  const winStreakInfo = getWinStreakInfo(winState.winStreak);
 
   return (
     <>
@@ -491,15 +520,6 @@ export const Modals: React.FC<ModalsProps> = ({
             <p className="goal" id="lg">
               {renderHighlightedDesc(previewLevel)}
             </p>
-            <p id="lm">
-              {previewLevel.n % 10 === 5 ? 'Challenge stage · ' : ''}
-              {previewLevel.moves} moves
-              {previewLevel.pre
-                ? ` · Starts with ${previewLevel.pre} blocks`
-                : ''}
-              <br />
-              Finish with spare moves for 3 stars
-            </p>
             <div className="ws" id="lst">
               {[1, 2, 3].map((i) => (
                 <i key={i} className={i <= previewStars ? 'on' : undefined}>
@@ -560,6 +580,70 @@ export const Modals: React.FC<ModalsProps> = ({
               </span>
             )}
           </p>
+
+          <div
+            className={`win-streak-box tier-${winStreakInfo.tier}`}
+            data-testid="win-streak-box"
+          >
+            <div className="wsb-head">
+              <span className="wsb-badge">
+                <span className="wsb-crest" aria-hidden="true">
+                  <FlameIcon className="wsb-flame" />
+                </span>
+                <span className="wsb-title-col">
+                  <strong>×{winStreakInfo.streak} {winStreakInfo.label}</strong>
+                  <small>
+                    {winState.streakBonusGems > 0
+                      ? 'Active win bonus'
+                      : `${winStreakInfo.gemsNeeded} more win for bonus`}
+                  </small>
+                </span>
+              </span>
+              {winState.streakBonusGems > 0 ? (
+                <span className="wsb-reward">
+                  <GemIcon />+{winState.streakBonusGems}
+                </span>
+              ) : (
+                <span className="wsb-next">
+                  +{winStreakInfo.nextBonusGems} <GemIcon />
+                </span>
+              )}
+            </div>
+
+            <div className="wsb-rail" aria-label="Win streak bonus tiers">
+              <div className="wsb-track">
+                <i
+                  style={{
+                    width: `${getWinStreakHudProgress(winState.winStreak).railPct}%`,
+                  }}
+                />
+              </div>
+              <div className="wsb-nodes">
+                {WIN_STREAK_MILESTONES.map((m) => {
+                  const reached = winState.winStreak >= m.streak;
+                  const active =
+                    (m.streak < 5 && winState.winStreak === m.streak) ||
+                    (m.streak === 5 && winState.winStreak >= 5);
+                  return (
+                    <div
+                      key={m.streak}
+                      className={`wsb-node${reached ? ' on' : ''}${
+                        active ? ' cur' : ''
+                      }`}
+                    >
+                      <span className="wsb-dot" />
+                      <small>{m.label}</small>
+                      <b>
+                        +{m.bonusGems}
+                        <GemIcon />
+                      </b>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           <button
             type="button"
             className="btn"
@@ -743,6 +827,134 @@ export const Modals: React.FC<ModalsProps> = ({
             Home Menu
           </button>
         </div>
+      </div>
+
+      {/* Achievement Detail Modal */}
+      <div
+        className={`over${selectedAchievement ? ' on' : ''}`}
+        id="achDetailModal"
+        role="dialog"
+        aria-modal="true"
+      >
+        {selectedAchievement && (() => {
+          const unlocked = !!cb.ach[selectedAchievement.id];
+          const unlockedTs = cb.ach[selectedAchievement.id];
+          const cur = Math.min(
+            selectedAchievement.getProgress(cb, prog),
+            selectedAchievement.target
+          );
+          return (
+            <div className="card detail-card">
+              <span className={`ai lg${unlocked ? ' on' : ''}`}>
+                <svg viewBox="0 0 24 24">
+                  <path d={selectedAchievement.iconPath} />
+                </svg>
+              </span>
+              <span className="detail-cat">{selectedAchievement.category}</span>
+              <h2>{selectedAchievement.title}</h2>
+              <p>{selectedAchievement.desc}</p>
+
+              <div className="detail-prog">
+                <div className="pb">
+                  <i style={{ width: `${(cur / selectedAchievement.target) * 100}%` }} />
+                </div>
+                <small>
+                  {cur.toLocaleString('en-US')} /{' '}
+                  {selectedAchievement.target.toLocaleString('en-US')}
+                </small>
+              </div>
+
+              <div className="detail-reward-pill">
+                <GemIcon />
+                <span>
+                  Reward: +{selectedAchievement.rewardGems} Gems{' '}
+                  {unlocked && unlockedTs
+                    ? `· Unlocked ${new Date(unlockedTs).toLocaleDateString()}`
+                    : '· Locked'}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  onInteract();
+                  onCloseAchievementDetail();
+                }}
+              >
+                Close
+              </button>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Match History Detail Modal */}
+      <div
+        className={`over${selectedHistory ? ' on' : ''}`}
+        id="historyDetailModal"
+        role="dialog"
+        aria-modal="true"
+      >
+        {selectedHistory && (
+          <div className="card detail-card">
+            <span className={`detail-cat${selectedHistory.won ? ' win' : ''}`}>
+              {selectedHistory.won ? 'Victory' : 'Completed Run'}
+            </span>
+            <h2>
+              {formatModeLabel(
+                selectedHistory.mode,
+                selectedHistory.levelNum,
+                selectedHistory.timerDur
+              )}
+            </h2>
+            <p>
+              {new Date(selectedHistory.date).toLocaleString(undefined, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </p>
+            <b className="gs">{selectedHistory.score.toLocaleString('en-US')}</b>
+
+            <div className="hist-detail-grid">
+              <div>
+                <strong>{selectedHistory.linesCleared}</strong>
+                <small>Lines</small>
+              </div>
+              <div>
+                <strong>x{selectedHistory.maxCombo}</strong>
+                <small>Max Combo</small>
+              </div>
+              <div>
+                <strong>{selectedHistory.powerUpsUsed}</strong>
+                <small>Power-Ups</small>
+              </div>
+              <div>
+                <strong>+{selectedHistory.xpEarned} XP</strong>
+                <small>Earned</small>
+              </div>
+              <div>
+                <strong>+{selectedHistory.gemsEarned}</strong>
+                <small>Gems</small>
+              </div>
+              <div>
+                <strong>{formatDuration(selectedHistory.durationSec)}</strong>
+                <small>Duration</small>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                onInteract();
+                onCloseHistoryDetail();
+              }}
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

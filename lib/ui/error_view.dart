@@ -33,7 +33,7 @@ class ErrorView extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  'Unable to load Cubora',
+                  'Unable to load Block Clash',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,

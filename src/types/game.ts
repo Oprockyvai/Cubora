@@ -2,11 +2,37 @@ export type GameMode = 'classic' | 'timer' | 'level';
 
 export type LevelGoalType = 'score' | 'lines' | 'item' | 'color' | 'combo';
 
-export type ThemeId = 'aurora' | 'sunset' | 'forest' | 'ocean';
+export type ThemeId =
+  | 'aurora'
+  | 'sunset'
+  | 'forest'
+  | 'ocean'
+  | 'obsidian'
+  | 'sakura';
+
+export type BlockSkinId = 'classic' | 'gemstone' | 'neon' | 'wooden' | 'frost';
+
+export type BoardEffectId = 'sparks' | 'nova' | 'prism';
+
+export type SoundPackId = 'default' | 'crystal' | 'arcade' | 'zen';
 
 export type LeaderboardKey = 'classic' | 't90' | 't180' | 't300' | 'level';
 
-export type PageId = 'pgSet' | 'pgStat' | 'pgAch' | 'pgThm' | 'pgLb';
+export type PageId =
+  | 'pgSet'
+  | 'pgStat'
+  | 'pgAch'
+  | 'pgThm'
+  | 'pgLb'
+  | 'pgMis';
+
+export type PowerUpId =
+  | 'hammer'
+  | 'boom'
+  | 'refresh'
+  | 'undo'
+  | 'hint'
+  | 'colorBlast';
 
 export type CellCoord = [number, number];
 
@@ -45,14 +71,18 @@ export interface SettingsState {
 
 export interface StatsState {
   games: number;
+  gamesCompleted: number;
   sum: number;
   best: number;
   lines: number;
   time: number;
   streak: number;
+  longestCombo: number;
   items: number;
   claims: number;
   perfect: number;
+  powerUpsUsed: number;
+  coinsEarned: number;
 }
 
 export interface DailyState {
@@ -68,19 +98,138 @@ export interface LeaderboardEntry {
   st?: number;
 }
 
+export type PowerUpInventory = Record<PowerUpId, number>;
+
+export interface PowerUpDef {
+  id: PowerUpId;
+  name: string;
+  shortName: string;
+  desc: string;
+  targetHint: string;
+  needsTarget: boolean;
+  starterQty: number;
+  maxQty: number;
+  unlockLevel: number;
+  refillCost: number;
+  accent: string;
+}
+
+export type MissionMetric =
+  | 'linesCleared'
+  | 'gamesCompleted'
+  | 'maxSingleScore'
+  | 'powerUpsUsed'
+  | 'maxCombo'
+  | 'winWithoutUndo';
+
+export interface MissionState {
+  id: string;
+  metric: MissionMetric;
+  title: string;
+  desc: string;
+  target: number;
+  progress: number;
+  rewardGems: number;
+  rewardXp: number;
+  claimed: boolean;
+}
+
+export interface DailyMissionsState {
+  dateKey: string;
+  items: MissionState[];
+}
+
+export interface MatchHistoryEntry {
+  id: string;
+  date: number;
+  mode: GameMode;
+  levelNum?: number;
+  timerDur?: number;
+  score: number;
+  linesCleared: number;
+  maxCombo: number;
+  powerUpsUsed: number;
+  xpEarned: number;
+  gemsEarned: number;
+  won: boolean;
+  durationSec: number;
+}
+
 export interface SaveState {
   v: number;
   name: string;
   av: number;
   gems: number;
+  xp: number;
+  playerLevel: number;
   theme: ThemeId;
   unl: ThemeId[];
+  unlockedSkins: BlockSkinId[];
+  equippedSkin: BlockSkinId;
+  unlockedEffects: BoardEffectId[];
+  equippedEffect: BoardEffectId;
+  unlockedSoundPacks: SoundPackId[];
+  equippedSoundPack: SoundPackId;
   set: SettingsState;
   st: StatsState;
+  powerUps: PowerUpInventory;
+  powerUpUsage: PowerUpInventory;
+  missions: DailyMissionsState;
+  missionsCompleted: number;
   ach: Record<string, number>;
+  claimedAch: Record<string, boolean>;
+  claimedScoreMilestones: number[];
   daily: DailyState;
+  winStreak: number;
+  bestWinStreak: number;
+  history: MatchHistoryEntry[];
   lb: Record<LeaderboardKey, LeaderboardEntry[]>;
   lastLb?: { k: LeaderboardKey; d: number };
+}
+
+export interface UndoSnapshot {
+  board: number[];
+  boardItems: number[];
+  pieces: (Piece | null)[];
+  score: number;
+  streak: number;
+  moves: number;
+  lv: LevelDef | null;
+  timeLeft: number;
+  linesClearedInRun: number;
+  runMaxCombo: number;
+  moveToken: string;
+}
+
+export interface ResumeSnapshot {
+  v: number;
+  savedAt: number;
+  mode: GameMode;
+  timerDur: number;
+  timeLeft: number;
+  lv: LevelDef | null;
+  moves: number;
+  board: number[];
+  boardItems: number[];
+  pieces: (Piece | null)[];
+  score: number;
+  streak: number;
+  revived: boolean;
+  undoUsedInRun: boolean;
+  powerUpsUsedInRun: number;
+  linesClearedInRun: number;
+  runMaxCombo: number;
+  durationSec: number;
+}
+
+export interface HintPlacement {
+  slotIdx: number;
+  piece: Piece;
+  r0: number;
+  c0: number;
+  cells: number[];
+  linesCleared: number;
+  scoreGain: number;
 }
 
 export interface LevelProgress {
@@ -106,12 +255,26 @@ export type ThemedMapId = 'crystal-valley' | 'cloud-city' | 'volcano' | 'abyss';
 export interface MapRoadStyle {
   shadowColor: string;
   curbColor: string;
+  curbHighlight: string;
   roadColor: string;
+  deckTop: string;
+  deckBottom: string;
   roadHighlight: string;
   inlayColor: string;
   glowColor: string;
   pedestalFill: string;
   pedestalStroke: string;
+}
+
+export interface BiomePalette {
+  skyTop: string;
+  skyMid: string;
+  skyBottom: string;
+  ridgeBack: string;
+  ridgeFront: string;
+  featureA: string;
+  featureB: string;
+  particleColor: string;
 }
 
 export interface WorldDef {
@@ -121,6 +284,7 @@ export interface WorldDef {
   acc: string;
   img: string;
   roadStyle: MapRoadStyle;
+  biome: BiomePalette;
   pts: [number, number][];
 }
 
@@ -137,10 +301,54 @@ export interface ThemeDef {
   bg2: string;
 }
 
+export interface BlockSkinDef {
+  id: BlockSkinId;
+  name: string;
+  desc: string;
+  costGems: number;
+  unlockLevel: number;
+}
+
+export interface BoardEffectDef {
+  id: BoardEffectId;
+  name: string;
+  desc: string;
+  costGems: number;
+  unlockLevel: number;
+  accent: string;
+}
+
+export interface SoundPackDef {
+  id: SoundPackId;
+  name: string;
+  desc: string;
+  costGems: number;
+  unlockLevel: number;
+}
+
+export interface ScoreMilestoneDef {
+  score: number;
+  title: string;
+  rewardGems: number;
+  rewardXp: number;
+}
+
+export interface PersonalChallengeDef {
+  id: string;
+  title: string;
+  desc: string;
+  current: number;
+  target: number;
+  rewardHint: string;
+  completed: boolean;
+}
+
 export interface AchievementDef {
   id: string;
   title: string;
   desc: string;
+  category: 'mastery' | 'combo' | 'powerups' | 'collection';
+  rewardGems: number;
   getProgress: (cb: SaveState, prog: LevelProgress) => number;
   target: number;
   iconPath: string;
@@ -152,3 +360,13 @@ export interface LastMoveInfo {
   n: number; // piece block count
   ic: Record<number, number>; // itemId -> count collected
 }
+
+export interface ToolEffectEvent {
+  id: number;
+  tool: PowerUpId;
+  cellIdx?: number;
+  targetCells?: number[];
+  colorIdx?: number;
+}
+
+

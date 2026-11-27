@@ -1,0 +1,84 @@
+workflows:
+  android-release:
+    name: Block Clash — Android Release (APK + AAB)
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      node: 22
+      java: 17
+      vars:
+        PACKAGE_NAME: "com.blockclash.game"
+      # To sign Play Store releases with your own upload keystore on Codemagic:
+      # 1. Create an Environment Variable group (e.g. `android_keystore`) with:
+      #    CM_KEYSTORE_BASE64, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+      # 2. Uncomment `groups:` below and the keystore decode lines in the script.
+      # groups:
+      #   - android_keystore
+    scripts:
+      - name: Install Node dependencies & run verification tests
+        script: |
+          npm ci
+          npx --yes tsx --test src/utils/*.test.ts
+          npm run lint
+          npm run build
+      - name: Build offline WebView game bundle (assets/game/index.html)
+        script: |
+          npm run build:android
+      - name: Run Flutter tests
+        script: |
+          flutter pub get
+          flutter test
+      - name: Decode keystore if configured
+        script: |
+          if [ -n "${CM_KEYSTORE_BASE64:-}" ]; then
+            echo "$CM_KEYSTORE_BASE64" | base64 --decode > /tmp/upload-keystore.jks
+            echo "CM_KEYSTORE_PATH=/tmp/upload-keystore.jks" >> "$CM_ENV"
+          fi
+      - name: Bootstrap & configure Android project
+        script: |
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android --org com.blockclash.game --project-name cubora
+          fi
+          node scripts/configure-android-ci.mjs
+      - name: Build Release APK & Play Store App Bundle (AAB)
+        script: |
+          flutter build apk --release --split-per-abi
+          flutter build apk --release
+          flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      email:
+        recipients:
+          - dev@blockclash.game
+        notify:
+          success: true
+          failure: true
+
+  android-debug:
+    name: Block Clash — Fast QA Debug APK
+    max_build_duration: 20
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      node: 22
+      java: 17
+    scripts:
+      - name: Build offline game assets
+        script: |
+          npm ci
+          npm run lint
+          npm run build:android
+      - name: Bootstrap Android & build debug APK
+        script: |
+          flutter pub get
+          flutter test
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android --org com.blockclash.game --project-name cubora
+          fi
+          node scripts/configure-android-ci.mjs
+          flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk

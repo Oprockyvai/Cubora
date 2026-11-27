@@ -1,25 +1,56 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { GRID_SIZE, MAX_LIVES } from '../data/constants';
-import { GameMode, LevelDef, Piece } from '../types/game';
-import { evaluateDropAttempt } from '../utils/gameHelpers';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { GRID_SIZE, MAX_LIVES, POWER_UP_DEFS } from '../data/constants';
+import {
+  BlockSkinId,
+  BoardEffectId,
+  GameMode,
+  HintPlacement,
+  LevelDef,
+  Piece,
+  PowerUpId,
+  PowerUpInventory,
+  ToolEffectEvent,
+} from '../types/game';
+import {
+  didStreakIncrease,
+  evaluateDropAttempt,
+  getBoardCellCenterPercent,
+  getComboHudState,
+} from '../utils/gameHelpers';
 import {
   fitsOnBoard,
   getClassicDifficultyProfile,
   pieceDimensions,
 } from '../utils/levelLogic';
+import {
+  getBoomAreaIndices,
+  getColorBlastIndices,
+  hasAnyOccupiedCell,
+} from '../utils/powerUpManager';
 import { formatClock } from '../utils/storage';
 import {
   BrandMarkSvg,
   CheckIcon,
+  FlameIcon,
   HeartIcon,
   HelpIcon,
   ItemSvg,
   LevelGoalIcon,
   MapGemSvg,
   PauseIcon,
+  PowerUpIcon,
   SoundIcon,
   StarIcon,
+  HammerIcon,
+  BoomIcon,
+  ColorBlastIcon,
 } from './Icons';
+import { PowerUpBar } from './PowerUpBar';
+import {
+  ActiveStreakFlare,
+  HudWinStreakCrest,
+  WinStreakOverlay,
+} from './WinStreakOverlay';
 
 interface DragSession {
   slotIdx: number;
@@ -101,6 +132,8 @@ interface GameBoardViewProps {
   score: number;
   best: number;
   streak: number;
+  winStreak?: number;
+  streakFlare?: ActiveStreakFlare | null;
   lives: number;
   nextLifeText: string;
   mode: GameMode;
@@ -110,6 +143,14 @@ interface GameBoardViewProps {
   busy: boolean;
   paused: boolean;
   muted: boolean;
+  equippedSkin: BlockSkinId;
+  equippedEffect: BoardEffectId;
+  powerUps: PowerUpInventory;
+  playerLevel: number;
+  activeTargetTool: PowerUpId | null;
+  activeToolFx: ToolEffectEvent | null;
+  canUndo: boolean;
+  activeHint: HintPlacement | null;
   toastInfo: { text: string; key: number };
   popCells: Set<number>;
   crashCells: Map<number, number>; // cellIdx -> delayMs
@@ -132,6 +173,10 @@ interface GameBoardViewProps {
   onPlacePiece: (slotIdx: number, pos: [number, number]) => void;
   onInvalidDrop: () => void;
   onAudioInit: () => void;
+  onActivatePowerUp: (id: PowerUpId) => void;
+  onCancelTargetMode: () => void;
+  onBoardTargetCell: (cellIdx: number) => void;
+  onOpenPowerUpWorkshop: () => void;
 }
 
 export const GameBoardView: React.FC<GameBoardViewProps> = ({
@@ -141,6 +186,8 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   score,
   best,
   streak,
+  winStreak = 0,
+  streakFlare = null,
   lives,
   nextLifeText,
   mode,
@@ -150,6 +197,14 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   busy,
   paused,
   muted,
+  equippedSkin,
+  equippedEffect,
+  powerUps,
+  playerLevel,
+  activeTargetTool,
+  activeToolFx,
+  canUndo,
+  activeHint,
   toastInfo,
   popCells,
   crashCells,
@@ -165,6 +220,10 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   onPlacePiece,
   onInvalidDrop,
   onAudioInit,
+  onActivatePowerUp,
+  onCancelTargetMode,
+  onBoardTargetCell,
+  onOpenPowerUpWorkshop,
 }) => {
   const [shownScore, setShownScore] = useState(score);
   const shownRef = useRef(score);
@@ -213,9 +272,60 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   const [invalidCells, setInvalidCells] = useState<Set<number>>(new Set());
   const invalidTimerRef = useRef<number | null>(null);
 
-  // Cancel any active drag cleanly if paused or busy changes
+  // Combo counter scale + pulse animation state whenever streak increases
+  const prevStreakRef = useRef<number>(streak);
+  const [comboPulseKey, setComboPulseKey] = useState<number>(0);
+  const [isComboPulsing, setIsComboPulsing] = useState<boolean>(false);
+  const comboPulseTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (paused || busy) {
+    const prev = prevStreakRef.current;
+    prevStreakRef.current = streak;
+    if (didStreakIncrease(prev, streak)) {
+      setComboPulseKey((k) => k + 1);
+      setIsComboPulsing(true);
+      if (comboPulseTimerRef.current !== null) {
+        window.clearTimeout(comboPulseTimerRef.current);
+      }
+      comboPulseTimerRef.current = window.setTimeout(() => {
+        setIsComboPulsing(false);
+        comboPulseTimerRef.current = null;
+      }, 580);
+    } else if (streak === 0) {
+      setIsComboPulsing(false);
+    }
+  }, [streak]);
+
+  // Target-selection hover preview for Hammer / Boom / Color Blast
+  const [hoverTargetCell, setHoverTargetCell] = useState<number | null>(null);
+  useEffect(() => {
+    if (!activeTargetTool) setHoverTargetCell(null);
+  }, [activeTargetTool]);
+
+  const targetPreviewCells = useMemo(() => {
+    if (!activeTargetTool || hoverTargetCell === null) return new Set<number>();
+    if (activeTargetTool === 'hammer') {
+      return board[hoverTargetCell] >= 0 ? new Set([hoverTargetCell]) : new Set<number>();
+    }
+    if (activeTargetTool === 'boom') {
+      return new Set(getBoomAreaIndices(hoverTargetCell));
+    }
+    if (activeTargetTool === 'colorBlast') {
+      const col = board[hoverTargetCell];
+      return col >= 0 ? new Set(getColorBlastIndices(board, col)) : new Set<number>();
+    }
+    return new Set<number>();
+  }, [activeTargetTool, hoverTargetCell, board]);
+
+  const hintCellSet = useMemo(
+    () => new Set(activeHint ? activeHint.cells : []),
+    [activeHint]
+  );
+  const hasOccupied = useMemo(() => hasAnyOccupiedCell(board), [board]);
+
+  // Cancel any active drag cleanly if paused, busy, or targeting changes
+  useEffect(() => {
+    if (paused || busy || activeTargetTool) {
       dragSessionRef.current = null;
       setActiveDrag(null);
       setGhostState({
@@ -224,12 +334,15 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
         colorIdx: 0,
       });
     }
-  }, [paused, busy]);
+  }, [paused, busy, activeTargetTool]);
 
   useEffect(() => {
     return () => {
       if (invalidTimerRef.current !== null) {
         window.clearTimeout(invalidTimerRef.current);
+      }
+      if (comboPulseTimerRef.current !== null) {
+        window.clearTimeout(comboPulseTimerRef.current);
       }
     };
   }, []);
@@ -246,7 +359,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       ds.lastLeft = left;
       ds.lastTop = top;
       if (dragFloatRef.current) {
-        dragFloatRef.current.style.transform = `translate(${left}px, ${top}px) scale(1.06) rotate(-2deg)`;
+        dragFloatRef.current.style.transform = `translate3d(${left}px, ${top}px, 0) scale(1.06) rotate(-2deg)`;
       }
       const b = ds.boardRect;
       const c0 = Math.round((left - b.left) / ds.cs);
@@ -373,7 +486,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
     if (activeDrag && ds && pt && dragFloatRef.current) {
       const left = pt.x - (ds.w * ds.cs) / 2;
       const top = pt.y - ds.h * ds.cs - 56;
-      dragFloatRef.current.style.transform = `translate(${left}px, ${top}px) scale(1.06) rotate(-2deg)`;
+      dragFloatRef.current.style.transform = `translate3d(${left}px, ${top}px, 0) scale(1.06) rotate(-2deg)`;
     }
   }, [activeDrag]);
 
@@ -383,7 +496,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   ) => {
     onAudioInit();
     const piece = pieces[slotIdx];
-    if (busy || paused || !piece || dragSessionRef.current) return;
+    if (busy || paused || activeTargetTool || !piece || dragSessionRef.current) return;
     const bEl = boardRef.current;
     if (!bEl) return;
     e.preventDefault();
@@ -527,6 +640,13 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               </div>
             </div>
 
+            {mode === 'level' && (
+              <HudWinStreakCrest
+                winStreak={winStreak}
+                isFlaring={!!streakFlare}
+              />
+            )}
+
             <div className="hud-actions">
               <button
                 type="button"
@@ -622,13 +742,54 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           {mode === 'level' && lv && renderLevelHud()}
         </div>
 
+        {/* Target Selection Banner when Hammer / Boom / Color Blast is active */}
+        {activeTargetTool && (
+          <div
+            className="target-banner"
+            id="targetBanner"
+            role="status"
+            style={{ ['--pu-acc' as string]: POWER_UP_DEFS[activeTargetTool].accent }}
+          >
+            <span className="tb-ic">
+              <PowerUpIcon id={activeTargetTool} />
+            </span>
+            <span className="tb-copy">
+              <strong>{POWER_UP_DEFS[activeTargetTool].name} Active</strong>
+              <small>{POWER_UP_DEFS[activeTargetTool].targetHint}</small>
+            </span>
+            <button
+              type="button"
+              className="tb-cancel"
+              id="cancelTargetMode"
+              onClick={() => {
+                onAudioInit();
+                onCancelTargetMode();
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* 8x8 Board */}
-        <div className="bw">
+        <div
+          className={`bw${activeTargetTool ? ' targeting' : ''}${
+            activeToolFx?.tool === 'undo' ? ' undo-flash' : ''
+          }`}
+          data-fx={equippedEffect}
+        >
           <div
             id="board"
             ref={boardRef}
+            data-skin={equippedSkin}
+            data-fx={equippedEffect}
             key={`board-${boardShakeKey}`}
-            className={boardShakeKey > 0 ? 'shake' : undefined}
+            className={`${boardShakeKey > 0 ? 'shake ' : ''}${
+              activeTargetTool ? `target-${activeTargetTool}` : ''
+            }`.trim()}
+            onPointerLeave={() => {
+              if (activeTargetTool) setHoverTargetCell(null);
+            }}
           >
             {board.map((v, i) => {
               const t = v >= 0 ? boardItems[i] : 0;
@@ -639,6 +800,11 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               const isCrash = crashDelay !== undefined;
               const isDead = deadCells.has(i);
               const isInvalid = invalidCells.has(i);
+              const isHint = hintCellSet.has(i);
+              const isTargetHit = targetPreviewCells.has(i);
+              const isSelectableTarget =
+                !!activeTargetTool &&
+                (activeTargetTool === 'boom' || v >= 0);
 
               let cls = 'k';
               if (v >= 0) cls += ' f';
@@ -649,6 +815,9 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               if (isCrash) cls += ' crash';
               if (isDead) cls += ' dead';
               if (isInvalid) cls += ' inv';
+              if (isHint) cls += ' hint-cell';
+              if (isSelectableTarget) cls += ' t-elig';
+              if (isTargetHit) cls += ' t-hit';
 
               const style: React.CSSProperties = {};
               if (v >= 0) {
@@ -657,6 +826,10 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
                 (style as Record<string, string>)[
                   '--col'
                 ] = `var(--c${ghostState.colorIdx})`;
+              } else if (isHint && activeHint) {
+                (style as Record<string, string>)[
+                  '--col'
+                ] = `var(--c${activeHint.piece.k})`;
               }
               if (isPv) {
                 (style as Record<string, string>)[
@@ -670,7 +843,23 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               }
 
               return (
-                <i key={i} className={cls} style={style}>
+                <i
+                  key={i}
+                  data-cell={i}
+                  className={cls}
+                  style={style}
+                  onPointerEnter={
+                    activeTargetTool ? () => setHoverTargetCell(i) : undefined
+                  }
+                  onClick={
+                    activeTargetTool
+                      ? () => {
+                          onAudioInit();
+                          onBoardTargetCell(i);
+                        }
+                      : undefined
+                  }
+                >
                   {t > 0 && (
                     <s className="itm">
                       <ItemSvg itemIndex={t - 1} />
@@ -698,26 +887,139 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               {toastInfo.text}
             </div>
           )}
+
+          {activeToolFx && activeToolFx.cellIdx !== undefined && (
+            <div key={activeToolFx.id} className="tool-fx-layer" aria-hidden="true">
+              {(() => {
+                const pos = getBoardCellCenterPercent(
+                  activeToolFx.cellIdx,
+                  GRID_SIZE
+                );
+                const anchorStyle: React.CSSProperties = {
+                  left: `${pos.xPct}%`,
+                  top: `${pos.yPct}%`,
+                };
+
+                if (activeToolFx.tool === 'hammer') {
+                  return (
+                    <div className="tfx-anchor tfx-hammer" style={anchorStyle}>
+                      <span className="tfx-hammer-ring" />
+                      <svg className="tfx-cracks" viewBox="0 0 64 64">
+                        <path d="M32 32L14 14M32 32L50 18M32 32L12 46M32 32L52 48M32 32L32 8M32 32L32 56" />
+                      </svg>
+                      <span className="tfx-hammer-swing">
+                        <HammerIcon />
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (activeToolFx.tool === 'boom') {
+                  return (
+                    <div className="tfx-anchor tfx-boom" style={anchorStyle}>
+                      <span className="tfx-boom-blast" />
+                      <span className="tfx-boom-ring" />
+                      <svg className="tfx-boom-rays" viewBox="0 0 100 100">
+                        <path d="M50 6v14M50 80v14M6 50h14M80 50h14M18 18l10 10M72 72l10 10M82 18L72 28M28 72L18 82" />
+                      </svg>
+                      <span className="tfx-boom-core">
+                        <BoomIcon />
+                      </span>
+                    </div>
+                  );
+                }
+
+                if (activeToolFx.tool === 'colorBlast') {
+                  return (
+                    <div className="tfx-anchor tfx-prism" style={anchorStyle}>
+                      <span className="tfx-prism-ring" />
+                      <span className="tfx-prism-nova">
+                        <ColorBlastIcon />
+                      </span>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+            </div>
+          )}
+
+          {activeToolFx?.tool === 'undo' && (
+            <div key={activeToolFx.id} className="tfx-undo-pulse" aria-hidden="true" />
+          )}
+
+          <WinStreakOverlay flare={streakFlare} />
         </div>
 
         {/* Combo meter */}
-        <div className="meter">
-          <i
-            id="mf"
-            style={{ width: `${(Math.min(streak || 0, 6) / 6) * 100}%` }}
-          />
-          <span id="mt">{streak > 1 ? `Combo x${streak}` : 'Combo'}</span>
-        </div>
+        {(() => {
+          const comboHud = getComboHudState(streak);
+          return (
+            <div
+              className={`meter tier-${comboHud.tier}${
+                isComboPulsing ? ' pulsing' : ''
+              }`}
+              data-streak={comboHud.streak}
+              data-pulsing={isComboPulsing ? 'true' : 'false'}
+            >
+              <i
+                id="mf"
+                style={{ width: `${comboHud.fillPct}%` }}
+              />
+              {comboPulseKey > 0 && (
+                <span
+                  key={`surge-${comboPulseKey}`}
+                  className="meter-surge"
+                  aria-hidden="true"
+                />
+              )}
+              <div className="meter-inner">
+                <span className="meter-lead">
+                  <FlameIcon
+                    className={`meter-flame${comboHud.isActive ? ' on' : ''}`}
+                  />
+                  {comboHud.isActive && (
+                    <em
+                      key={`badge-${comboPulseKey}`}
+                      className={`meter-badge${
+                        comboPulseKey > 0 ? ' combo-pop' : ''
+                      }`}
+                    >
+                      {comboHud.badgeText}
+                    </em>
+                  )}
+                </span>
+                <span
+                  id="mt"
+                  key={`mt-${comboPulseKey}`}
+                  className={comboPulseKey > 0 ? 'combo-pop' : undefined}
+                >
+                  {comboHud.label}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Piece Tray */}
-        <div className="tray" id="tray">
+        <div
+          className={`tray${activeTargetTool ? ' dim-tray' : ''}${
+            activeToolFx?.tool === 'refresh' ? ' refreshing' : ''
+          }`}
+          id="tray"
+          data-skin={equippedSkin}
+        >
           {[0, 1, 2].map((slotIdx) => {
             const p = pieces[slotIdx];
             const isDraggingThis = activeDrag?.slotIdx === slotIdx;
+            const isHintSlot = activeHint?.slotIdx === slotIdx;
             return (
               <div
                 key={slotIdx}
-                className={`slot${!p ? ' empty' : ''}`}
+                className={`slot${!p ? ' empty' : ''}${
+                  isHintSlot ? ' hint-slot' : ''
+                }`}
                 onPointerDown={(e) => handleSlotPointerDown(e, slotIdx)}
               >
                 {p && (
@@ -732,12 +1034,33 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           })}
         </div>
 
-        <p className="hint cap">Drag pieces onto the board</p>
+        {/* Modular Power-Up Bar */}
+        <PowerUpBar
+          inventory={powerUps}
+          playerLevel={playerLevel}
+          activeTargetTool={activeTargetTool}
+          canUndo={canUndo}
+          hasOccupiedCells={hasOccupied}
+          busy={busy}
+          paused={paused}
+          onActivatePowerUp={(id) => {
+            onAudioInit();
+            onActivatePowerUp(id);
+          }}
+          onCancelTargetMode={() => {
+            onAudioInit();
+            onCancelTargetMode();
+          }}
+          onOpenWorkshop={() => {
+            onAudioInit();
+            onOpenPowerUpWorkshop();
+          }}
+        />
       </div>
 
       {/* Floating dragged piece */}
       {activeDrag && (
-        <div ref={dragFloatRef} className="drag">
+        <div ref={dragFloatRef} className="drag" data-skin={equippedSkin}>
           <PieceGrid piece={activeDrag.piece} cellSize={activeDrag.cs} />
         </div>
       )}

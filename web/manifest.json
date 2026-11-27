@@ -1,11 +1,11 @@
 {
-    "name": "Cubora",
-    "short_name": "Cubora",
+    "name": "Block Clash",
+    "short_name": "Block Clash",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0d1030",
-    "theme_color": "#0d1030",
-    "description": "Cubora - a neon block puzzle game.",
+    "background_color": "#090e1d",
+    "theme_color": "#090e1d",
+    "description": "Block Clash - a tactile offline block puzzle game.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

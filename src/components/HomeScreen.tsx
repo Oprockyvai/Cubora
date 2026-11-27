@@ -1,11 +1,18 @@
 import React, { useRef } from 'react';
 import { ACHIEVEMENTS, MAX_LIVES, WORLDS } from '../data/constants';
-import { LevelProgress, PageId, SaveState } from '../types/game';
+import {
+  LevelProgress,
+  PageId,
+  ResumeSnapshot,
+  SaveState,
+} from '../types/game';
 import { locateLevel } from '../utils/levelLogic';
+import { formatModeLabel, xpForNextLevel } from '../utils/progressionManager';
 import { getDailyRewardState } from '../utils/storage';
 import { HomeDustOverlay } from './HomeDustOverlay';
 import {
   AvatarSvg,
+  BoltIcon,
   BrandMarkSvg,
   ChartIcon,
   GearIcon,
@@ -13,6 +20,7 @@ import {
   GiftIcon,
   HeartIcon,
   HelpIcon,
+  MissionIcon,
   PlayIcon,
   RankIcon,
   StarIcon,
@@ -27,9 +35,13 @@ interface HomeScreenProps {
   lives: number;
   nextLifeText?: string;
   classicBest: number;
+  resumeSnapshot: ResumeSnapshot | null;
+  onResumeSavedGame: () => void;
+  onDiscardSavedGame: () => void;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
   onOpenTutorial: () => void;
+  onOpenPowerUpWorkshop: () => void;
   onPlayCurrent: () => void;
   onOpenMap: () => void;
   onOpenTimerSelect: () => void;
@@ -46,9 +58,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   lives,
   nextLifeText = '',
   classicBest,
+  resumeSnapshot,
+  onResumeSavedGame,
+  onDiscardSavedGame,
   onOpenProfile,
   onOpenSettings,
   onOpenTutorial,
+  onOpenPowerUpWorkshop,
   onPlayCurrent,
   onOpenMap,
   onOpenTimerSelect,
@@ -70,6 +86,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const classicModeBest = Math.max(cb.lb.classic[0]?.s || 0, classicBest);
   const dailyCanClaim = getDailyRewardState(cb.daily).canClaim;
   const unlockedAch = ACHIEVEMENTS.filter((a) => !!cb.ach[a.id]).length;
+  const claimableMissions = (cb.missions?.items || []).filter(
+    (m) => m.progress >= m.target && !m.claimed
+  ).length;
+  const xpNeeded = xpForNextLevel(cb.playerLevel || 1);
+  const xpPct = Math.min(100, Math.round(((cb.xp || 0) / xpNeeded) * 100));
 
   const handleAction = (fn: () => void) => {
     onInteract();
@@ -90,7 +111,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       />
 
       <div className="hin">
-        {/* Top Bar: Profile, Gems, Tutorial, Settings */}
+        {/* Top Bar: Profile, Gems, Daily, Tutorial, Settings */}
         <header className="htop">
           <button
             type="button"
@@ -104,7 +125,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
             <span className="pn">
               <b id="hname">{cb.name}</b>
-              <small id="hlvl">Level {prog.u}</small>
+              <small id="hlvl">
+                Lv.{cb.playerLevel || 1} · Stage {prog.u}
+              </small>
+              <span className="xp-mini-track" aria-hidden="true">
+                <i style={{ width: `${xpPct}%` }} />
+              </span>
             </span>
           </button>
 
@@ -113,6 +139,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <GemIcon />
               <b>{cb.gems.toLocaleString('en-US')}</b>
             </div>
+            <button
+              type="button"
+              className="ib"
+              id="navDaily"
+              aria-label="Daily reward"
+              title="Daily login reward"
+              onClick={() => handleAction(onOpenDaily)}
+            >
+              <GiftIcon />
+              {dailyCanClaim && <i className="dot" id="hdot" />}
+            </button>
             <button
               type="button"
               className="ib"
@@ -152,7 +189,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 className="hi"
                 id="hhi"
                 style={{
-                  backgroundImage: `url('/img/block_clash_hero.jpg'), url(${world.img})`,
+                  backgroundImage: `url('./img/block_clash_hero.jpg'), url(${world.img})`,
                 }}
               />
               <div className="hero-world-chip">
@@ -183,6 +220,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {/* Right Column (Desktop) / Lower Action Zone (Mobile) */}
           <div className="hcol-secondary">
+            {resumeSnapshot && (
+              <div className="resume-bar" id="resumeBar">
+                <div className="rb-info">
+                  <strong>
+                    Resume {formatModeLabel(resumeSnapshot.mode, resumeSnapshot.lv?.n, resumeSnapshot.timerDur)}
+                  </strong>
+                  <small>
+                    {resumeSnapshot.score.toLocaleString('en-US')} pts ·{' '}
+                    {resumeSnapshot.linesClearedInRun} lines
+                  </small>
+                </div>
+                <div className="rb-actions">
+                  <button
+                    type="button"
+                    className="rb-btn"
+                    id="resumeSavedBtn"
+                    onClick={() => handleAction(onResumeSavedGame)}
+                  >
+                    <PlayIcon />
+                    Resume
+                  </button>
+                  <button
+                    type="button"
+                    className="rb-discard"
+                    aria-label="Discard saved game"
+                    title="Discard saved match"
+                    onClick={() => handleAction(onDiscardSavedGame)}
+                  >
+                    {'\u00d7'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="hsec-label">Game Modes</div>
             <div className="hmodes">
               <button
@@ -262,12 +333,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 className="nv"
-                id="navDaily"
-                onClick={() => handleAction(onOpenDaily)}
+                id="navMissions"
+                onClick={() => handleAction(() => onOpenPage('pgMis'))}
               >
-                <GiftIcon />
-                <span>Daily</span>
-                {dailyCanClaim && <i className="dot" id="hdot" />}
+                <MissionIcon />
+                <span>Missions</span>
+                {claimableMissions > 0 && <i className="dot" />}
+              </button>
+              <button
+                type="button"
+                className="nv"
+                id="navPowerUps"
+                onClick={() => handleAction(onOpenPowerUpWorkshop)}
+              >
+                <BoltIcon />
+                <span>Tools</span>
               </button>
               <button
                 type="button"
@@ -284,20 +364,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 className="nv"
-                id="navRanks"
-                onClick={() => handleAction(() => onOpenPage('pgLb'))}
-              >
-                <RankIcon />
-                <span>Ranks</span>
-              </button>
-              <button
-                type="button"
-                className="nv"
                 id="navThemes"
                 onClick={() => handleAction(() => onOpenPage('pgThm'))}
               >
                 <ThemeIcon />
-                <span>Themes</span>
+                <span>Collection</span>
               </button>
               <button
                 type="button"
@@ -308,6 +379,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <ChartIcon />
                 <span>Stats</span>
               </button>
+              <button
+                type="button"
+                className="nv"
+                id="navRanks"
+                onClick={() => handleAction(() => onOpenPage('pgLb'))}
+              >
+                <RankIcon />
+                <span>Ranks</span>
+              </button>
             </nav>
           </div>
         </div>
@@ -315,3 +395,4 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     </div>
   );
 };
+

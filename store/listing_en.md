@@ -13,7 +13,7 @@ Drag. Fit. Clash. Chain.
 Block Clash is a tactile, jewel-crafted 8x8 block puzzle built for quick breaks and deep combo runs alike. Place beveled crystal blocks onto the slate board, clear full rows and columns to shatter tiles, and chain consecutive clears for multiplied scores — 100% offline, with zero ads and zero waiting.
 
 THREE DISTINCT GAME MODES
-- LEVELS: Journey vertically across four illustrated realms — Crystal Valley, Neon City, Lava Core, and Quantum Realm. Tackle unique level goals (points, line clears, collectible relics, color targets, and combo streaks) with limited moves and up to 3 stars per stage.
+- LEVELS: Journey vertically across four illustrated realms — Crystal Valley, Cloud City, Volcano, and Abyss — with quick realm switcher tabs. Tackle unique level goals (points, line clears, collectible relics, color targets, and combo streaks) with limited moves and up to 3 stars per stage.
 - TIMER RUSH: Race against 90-second, 3-minute, or 5-minute clocks. Every cleared line adds +2 seconds of bonus time!
 - CLASSIC ENDLESS: Pure 8x8 puzzle strategy at your own pace with 5 regenerating lives and gem revives to extend record runs.
 

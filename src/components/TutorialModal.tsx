@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { BrandMarkSvg, GemIcon, GiftIcon, ThemeIcon } from './Icons';
+import {
+  BoomIcon,
+  BrandMarkSvg,
+  GemIcon,
+  GiftIcon,
+  HammerIcon,
+  HintIcon,
+  ThemeIcon,
+  UndoIcon,
+} from './Icons';
 
 interface TutorialModalProps {
   open: boolean;
@@ -10,27 +19,33 @@ interface TutorialModalProps {
 const STEPS = [
   {
     id: 'place',
-    badge: 'STEP 1 OF 4',
+    badge: 'STEP 1 OF 5',
     title: 'Drag, Aim & Fit',
     body: 'Pick any block piece from the three-slot tray and drag it onto the 8x8 board. A glowing outline confirms valid spots — invalid drops pulse red and snap back safely.',
   },
   {
     id: 'clear',
-    badge: 'STEP 2 OF 4',
+    badge: 'STEP 2 OF 5',
     title: 'Clear Lines & Chain Combos',
     body: 'Fill any complete row or column to shatter the blocks. Clear lines on consecutive turns to charge the Combo meter for multiplied points!',
   },
   {
+    id: 'powerups',
+    badge: 'STEP 3 OF 5',
+    title: 'Tactical Power-Ups',
+    body: 'Use Hammer to smash 1 block, Boom to clear a 3x3 zone, Refresh for new tray pieces, Undo to step back 1 normal move, Hint to spotlight a fit, or Color Blast at Lv.2.',
+  },
+  {
     id: 'modes',
-    badge: 'STEP 3 OF 4',
+    badge: 'STEP 4 OF 5',
     title: 'Three Ways to Play',
     body: 'Journey through 4 Worlds in Levels with stars and goals, race the clock in Timer Rush (+2s per cleared line), or test pure endurance in Classic.',
   },
   {
     id: 'rewards',
-    badge: 'STEP 4 OF 4',
-    title: 'Themes, Daily Gems & Awards',
-    body: 'Collect gems from daily login streaks, achievements, and 3-star clears to unlock tactile board themes or continue a great run — 100% offline.',
+    badge: 'STEP 5 OF 5',
+    title: 'Missions, Skins & Offline Rewards',
+    body: 'Complete daily missions, level up your XP rank, unlock block skins, sound packs, and board themes — 100% offline on your device.',
   },
 ] as const;
 
@@ -142,6 +157,27 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             </div>
           )}
 
+          {step.id === 'powerups' && (
+            <div className="tut-rewards-demo">
+              <div className="tr-chip">
+                <HammerIcon />
+                <span>Hammer · 1 Cell</span>
+              </div>
+              <div className="tr-chip">
+                <BoomIcon />
+                <span>Boom · 3x3 Area</span>
+              </div>
+              <div className="tr-chip">
+                <UndoIcon />
+                <span>Undo Last Move</span>
+              </div>
+              <div className="tr-chip">
+                <HintIcon />
+                <span>Legal Fit Hint</span>
+              </div>
+            </div>
+          )}
+
           {step.id === 'modes' && (
             <div className="tut-modes-demo">
               <div className="tm-pill gold">
@@ -167,15 +203,15 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div className="tr-chip">
                 <GiftIcon />
-                <span>Daily Gems</span>
+                <span>Daily Missions</span>
               </div>
               <div className="tr-chip">
                 <ThemeIcon />
-                <span>4 Themes</span>
+                <span>Skins &amp; Themes</span>
               </div>
               <div className="tr-chip">
                 <GemIcon />
-                <span>Revive Runs</span>
+                <span>XP Level Rewards</span>
               </div>
             </div>
           )}

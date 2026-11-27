@@ -47,7 +47,7 @@ class _WebGameIframeState extends State<_WebGameIframe> {
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.display = 'block';
-      iframe.style.backgroundColor = '#0d1030';
+      iframe.style.backgroundColor = '#090e1d';
       iframe.allow = 'autoplay';
       iframe.addEventListener(
         'load',

@@ -9,7 +9,7 @@ class CuboraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cubora',
+      title: 'Block Clash',
       debugShowCheckedModeBanner: false,
       theme: CuboraTheme.dark,
       home: const GameScreen(),

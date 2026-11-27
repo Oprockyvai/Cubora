@@ -1,4 +1,4 @@
-import { SettingsState } from '../types/game';
+import { SettingsState, SoundPackId } from '../types/game';
 
 const CHORDS = [
   [220, 261.6, 329.6],
@@ -7,6 +7,32 @@ const CHORDS = [
   [196, 246.9, 293.7],
 ];
 
+export type SoundEffectKind =
+  | 'ui'
+  | 'select'
+  | 'place'
+  | 'invalid'
+  | 'crash'
+  | 'combo'
+  | 'hammer'
+  | 'boom'
+  | 'colorBlast'
+  | 'refresh'
+  | 'undo'
+  | 'hint'
+  | 'mission'
+  | 'achievement'
+  | 'levelup'
+  | 'reward'
+  | 'over';
+
+const PACK_OSC: Record<SoundPackId, { lead: OscillatorType; music: OscillatorType; pitchScale: number }> = {
+  default: { lead: 'triangle', music: 'triangle', pitchScale: 1 },
+  crystal: { lead: 'sine', music: 'sine', pitchScale: 1.18 },
+  arcade: { lead: 'square', music: 'square', pitchScale: 0.96 },
+  zen: { lead: 'sine', music: 'sine', pitchScale: 0.84 },
+};
+
 class CuboraAudioEngine {
   private ctx: AudioContext | null = null;
   private mg: GainNode | null = null;
@@ -14,6 +40,7 @@ class CuboraAudioEngine {
   private musicTimer: number | null = null;
   private step = 0;
   private paused = false;
+  private soundPack: SoundPackId = 'default';
   private settings: SettingsState = {
     mus: 1,
     sfx: 1,
@@ -23,8 +50,9 @@ class CuboraAudioEngine {
     rm: 0,
   };
 
-  public applySettings(s: SettingsState): void {
+  public applySettings(s: SettingsState, pack: SoundPackId = this.soundPack): void {
     this.settings = { ...s };
+    this.soundPack = pack;
     if (this.mg) {
       this.mg.gain.value = s.sfx ? s.sv : 0;
     }
@@ -113,45 +141,109 @@ class CuboraAudioEngine {
     src.start(time);
   }
 
-  public sfx(
-    kind: 'ui' | 'place' | 'crash' | 'over' | 'invalid' | 'reward',
-    streak = 1
-  ): void {
+  public sfx(kind: SoundEffectKind, streak = 1, packOverride?: SoundPackId): void {
+    this.init();
     if (!this.ctx || !this.settings.sfx) return;
     const t = this.ctx.currentTime;
-    if (kind === 'ui') {
-      this.tone(580, t, 0.045, 'triangle', 0.09);
-      this.tone(880, t + 0.025, 0.045, 'sine', 0.05);
-      return;
+    const pack = PACK_OSC[packOverride || this.soundPack] || PACK_OSC.default;
+    const ps = pack.pitchScale;
+
+    switch (kind) {
+      case 'ui':
+        this.tone(580 * ps, t, 0.045, pack.lead, 0.085);
+        this.tone(880 * ps, t + 0.025, 0.045, 'sine', 0.05);
+        return;
+      case 'select':
+        this.tone(440 * ps, t, 0.06, pack.lead, 0.11);
+        this.tone(660 * ps, t + 0.03, 0.07, 'sine', 0.08);
+        return;
+      case 'place':
+        this.tone(330 * ps, t, 0.11, pack.lead, 0.19);
+        this.tone(165 * ps, t, 0.13, 'sine', 0.17);
+        return;
+      case 'invalid':
+        this.tone(160, t, 0.07, 'triangle', 0.14);
+        this.tone(125, t + 0.06, 0.09, 'sawtooth', 0.06);
+        return;
+      case 'hammer':
+        this.tone(260, t, 0.06, 'square', 0.12);
+        this.tone(112, t + 0.015, 0.16, 'triangle', 0.25);
+        this.tone(720 * ps, t + 0.045, 0.09, 'sine', 0.09);
+        return;
+      case 'boom':
+        this.tone(142, t, 0.26, 'sawtooth', 0.18);
+        this.tone(68, t + 0.025, 0.34, 'sine', 0.28);
+        this.boom(t);
+        return;
+      case 'colorBlast':
+        [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.032, 0.22, 'sine', 0.1);
+        });
+        this.tone(220 * ps, t, 0.22, 'triangle', 0.14);
+        return;
+      case 'refresh':
+        [392, 523.25, 659.25].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.045, 0.13, pack.lead, 0.1);
+        });
+        return;
+      case 'undo':
+        this.tone(540 * ps, t, 0.08, pack.lead, 0.11);
+        this.tone(392 * ps, t + 0.055, 0.11, 'sine', 0.1);
+        return;
+      case 'hint':
+        this.tone(740 * ps, t, 0.11, 'sine', 0.1);
+        this.tone(987.77 * ps, t + 0.07, 0.16, 'sine', 0.09);
+        return;
+      case 'combo': {
+        const base = 370 * ps * Math.pow(1.11, Math.min(streak, 7));
+        [0, 4, 7, 11].forEach((s, i) => {
+          this.tone(base * Math.pow(2, s / 12), t + i * 0.045, 0.26, pack.lead, 0.11);
+        });
+        return;
+      }
+      case 'crash': {
+        const b = 330 * ps * Math.pow(1.1225, Math.min(streak, 6));
+        [0, 4, 7, 12, 16].forEach((s, i) => {
+          this.tone(b * Math.pow(2, s / 12), t + i * 0.05, 0.35, pack.lead, 0.11);
+        });
+        return;
+      }
+      case 'mission':
+        [523.25, 659.25, 783.99].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.06, 0.22, pack.lead, 0.11);
+        });
+        return;
+      case 'achievement':
+        [587.33, 739.99, 880, 1174.66].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.065, 0.32, pack.lead, 0.11);
+        });
+        return;
+      case 'levelup':
+        [440, 554.37, 659.25, 880, 1108.73].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.07, 0.36, pack.lead, 0.12);
+        });
+        return;
+      case 'reward':
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          this.tone(f * ps, t + i * 0.07, 0.28, pack.lead, 0.11);
+        });
+        return;
+      case 'over':
+        [392, 330, 262, 196].forEach((f, i) => {
+          this.tone(f, t + i * 0.2, 0.45, 'sawtooth', 0.09);
+        });
+        return;
     }
-    if (kind === 'place') {
-      this.tone(330, t, 0.11, 'triangle', 0.21);
-      this.tone(165, t, 0.13, 'sine', 0.19);
-      return;
-    }
-    if (kind === 'invalid') {
-      this.tone(160, t, 0.07, 'triangle', 0.14);
-      this.tone(125, t + 0.06, 0.09, 'sawtooth', 0.06);
-      return;
-    }
-    if (kind === 'reward') {
-      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-        this.tone(f, t + i * 0.07, 0.28, 'triangle', 0.11);
-      });
-      return;
-    }
-    if (kind === 'crash') {
-      const b = 330 * Math.pow(1.1225, Math.min(streak, 6));
-      [0, 4, 7, 12, 16].forEach((s, i) => {
-        this.tone(b * Math.pow(2, s / 12), t + i * 0.05, 0.35, 'triangle', 0.11);
-      });
-      return;
-    }
-    if (kind === 'over') {
-      [392, 330, 262, 196].forEach((f, i) => {
-        this.tone(f, t + i * 0.2, 0.45, 'sawtooth', 0.09);
-      });
-    }
+  }
+
+  public previewSoundPack(pack: SoundPackId): void {
+    this.init();
+    if (!this.ctx || !this.settings.sfx) return;
+    const t = this.ctx.currentTime;
+    const spec = PACK_OSC[pack];
+    [440, 554.37, 659.25, 880].forEach((f, i) => {
+      this.tone(f * spec.pitchScale, t + i * 0.075, 0.22, spec.lead, 0.1);
+    });
   }
 
   public playBreakSequence(): void {
@@ -172,12 +264,14 @@ class CuboraAudioEngine {
     this.musicTimer = window.setInterval(() => {
       if (!this.ctx || !this.settings.mus || this.paused) return;
       const t = this.ctx.currentTime + 0.05;
+      const pack = PACK_OSC[this.soundPack] || PACK_OSC.default;
       const ch = CHORDS[Math.floor(this.step / 8) % 4];
       const k = this.step % 8;
       const pattern = [0, 1, 2, 1, 0, 1, 2, 1];
-      this.tone(ch[pattern[k]] * 2, t, 0.28, 'triangle', 0.035, this.mus);
+      const volLead = pack.music === 'square' ? 0.016 : 0.035;
+      this.tone(ch[pattern[k]] * 2 * pack.pitchScale, t, 0.28, pack.music, volLead, this.mus);
       if (k % 4 === 0) {
-        this.tone(ch[0] / 2, t, 0.6, 'sine', 0.06, this.mus);
+        this.tone((ch[0] / 2) * pack.pitchScale, t, 0.6, 'sine', 0.06, this.mus);
       }
       this.step++;
     }, 300);
@@ -213,9 +307,19 @@ class CuboraAudioEngine {
 
 export const audioEngine = new CuboraAudioEngine();
 
+interface NativeBridgeWindow extends Window {
+  CuboraBridge?: { postMessage: (msg: string) => void };
+}
+
 export function vibratePattern(pattern: number | number[], settings: SettingsState): void {
   if (!settings.hap || settings.rm) return;
   try {
+    const bridge = (window as NativeBridgeWindow).CuboraBridge;
+    if (bridge && typeof bridge.postMessage === 'function') {
+      const ms = Math.round(Array.isArray(pattern) ? (pattern[0] ?? 0) : pattern);
+      bridge.postMessage(`h:${ms}`);
+      return;
+    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(pattern);
     }
@@ -223,3 +327,4 @@ export function vibratePattern(pattern: number | number[], settings: SettingsSta
     // ignore
   }
 }
+
