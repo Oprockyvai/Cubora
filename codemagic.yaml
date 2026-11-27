@@ -2,7 +2,7 @@ workflows:
   android-release:
     name: Block Clash — Android Release (APK + AAB)
     max_build_duration: 30
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       flutter: stable
       node: 22
@@ -60,7 +60,7 @@ workflows:
   android-debug:
     name: Block Clash — Fast QA Debug APK
     max_build_duration: 20
-    instance_type: linux_x2
+    instance_type: mac_mini_m2
     environment:
       flutter: stable
       node: 22
