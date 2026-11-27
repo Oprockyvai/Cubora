@@ -424,6 +424,7 @@ h1 {
   background: color-mix(in srgb, var(--panel) 94%, #000);
   border-radius: 20px;
   touch-action: none;
+  position: relative;
   contain: layout style paint;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
     0 20px 46px rgba(0, 0, 0, 0.42),
@@ -441,7 +442,7 @@ h1 {
   border-radius: 6px;
   background: color-mix(in srgb, var(--cell) 72%, #050814);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: transform 0.12s, background-color 0.12s, box-shadow 0.12s;
+  transition: background-color 0.12s;
 }
 
 /* Tactile beveled crystal block material */
@@ -6549,4 +6550,78 @@ body[data-drag] .meter-surge {
 
 .wbn {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Placement ghost overlay: moved with transform only (compositor), never repaints cells. */
+.dghl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.dghc {
+  position: absolute;
+  pointer-events: none;
+}
+
+.dghc::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--col) 26%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--col) 88%, #fff);
+}
+
+/* ===========================
+   LEVEL MAP REFINEMENTS
+   =========================== */
+/* Grounded nodes: a soft contact shadow stays on the road while the gem gently floats,
+   which reads as depth without any filter/blur cost. */
+.mk:not(.cur)::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -4%;
+  height: 20%;
+  z-index: -3;
+  border-radius: 50%;
+  background: rgba(4, 10, 24, 0.34);
+  pointer-events: none;
+}
+
+/* Clearer hierarchy: upcoming (locked) levels recede, the current level pops. */
+.mk.locked .gm2 {
+  opacity: 0.86;
+}
+
+.mk-state-seal {
+  width: 15px;
+  height: 15px;
+}
+
+.mk.locked {
+  font-size: calc(var(--ns) * 0.34);
+}
+
+/* Smoother, more natural touch scrolling inside the map. */
+.msc {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.msc::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tidier bottom realm plate. */
+.wbn strong {
+  letter-spacing: 0.01em;
 }
