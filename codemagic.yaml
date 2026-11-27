@@ -6,7 +6,7 @@ workflows:
     environment:
       flutter: stable
       node: 22
-      java: 17
+      java: 21
       vars:
         PACKAGE_NAME: "com.blockclash.game"
       # To sign Play Store releases with your own upload keystore on Codemagic:
@@ -64,7 +64,7 @@ workflows:
     environment:
       flutter: stable
       node: 22
-      java: 17
+      java: 21
     scripts:
       - name: Build offline game assets
         script: |
