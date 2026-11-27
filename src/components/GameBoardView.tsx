@@ -65,6 +65,10 @@ interface DragSession {
   lastR0: number;
   lastC0: number;
   lastKey: string;
+  /** Exact pixel origin + pitch of the real grid cells (relative to the board). */
+  ox: number;
+  oy: number;
+  pitch: number;
 }
 
 interface PieceGridProps {
@@ -255,63 +259,75 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
 
   const dragSessionRef = useRef<DragSession | null>(null);
   const dragFloatRef = useRef<HTMLDivElement | null>(null);
+  const ghostLayerRef = useRef<HTMLDivElement | null>(null);
   const [activeDrag, setActiveDrag] = useState<{
     slotIdx: number;
     piece: Piece;
     cs: number;
+    pitch: number;
   } | null>(null);
-  // Ghost + line-preview highlights are applied straight to the board DOM nodes.
-  // Routing them through React state re-rendered the entire HUD + 64 cells on every
-  // cell the finger crossed, which is what made block dragging feel laggy.
-  const appliedGhostRef = useRef<{ ghost: number[]; preview: number[] }>({
-    ghost: [],
-    preview: [],
-  });
+  // The placement ghost is a single overlay that is only *moved* (transform = GPU
+  // compositor, zero board repaint). Toggling classes on board cells made Chromium
+  // re-rasterize the whole 64-cell board on every cell the finger crossed, which is what
+  // made dragging onto the board stutter on phones. Only the (rare) "this will clear a
+  // line" highlight still touches cells, and only when it actually changes.
+  const appliedPreviewRef = useRef<number[]>([]);
 
-  const clearGhost = useCallback(() => {
+  const clearPreview = useCallback(() => {
+    const applied = appliedPreviewRef.current;
+    if (applied.length === 0) return;
     const boardEl = boardRef.current;
-    const applied = appliedGhostRef.current;
     if (boardEl) {
       const cells = boardEl.children;
-      for (const i of applied.ghost) {
-        const el = cells[i] as HTMLElement | undefined;
-        if (!el) continue;
-        el.classList.remove('g');
-        el.style.removeProperty('--col');
-      }
-      for (const i of applied.preview) {
+      for (const i of applied) {
         const el = cells[i] as HTMLElement | undefined;
         if (!el) continue;
         el.classList.remove('pv');
         el.style.removeProperty('--pc');
       }
     }
-    appliedGhostRef.current = { ghost: [], preview: [] };
+    appliedPreviewRef.current = [];
   }, [boardRef]);
 
-  const applyGhost = useCallback(
-    (ghost: number[], preview: number[], colorIdx: number) => {
-      clearGhost();
+  const applyPreview = useCallback(
+    (preview: number[], colorIdx: number) => {
+      const prev = appliedPreviewRef.current;
+      if (
+        prev.length === preview.length &&
+        prev.every((v, i) => v === preview[i])
+      ) {
+        return;
+      }
+      clearPreview();
       const boardEl = boardRef.current;
-      if (!boardEl) return;
+      if (!boardEl || preview.length === 0) return;
       const cells = boardEl.children;
       const colVar = `var(--c${colorIdx})`;
-      for (const i of ghost) {
-        const el = cells[i] as HTMLElement | undefined;
-        if (!el) continue;
-        el.classList.add('g');
-        el.style.setProperty('--col', colVar);
-      }
       for (const i of preview) {
         const el = cells[i] as HTMLElement | undefined;
         if (!el) continue;
         el.classList.add('pv');
         el.style.setProperty('--pc', colVar);
       }
-      appliedGhostRef.current = { ghost, preview };
+      appliedPreviewRef.current = preview;
     },
-    [boardRef, clearGhost]
+    [boardRef, clearPreview]
   );
+
+  const placeGhost = useCallback((ds: DragSession, r0: number, c0: number) => {
+    const layer = ghostLayerRef.current;
+    if (!layer) return;
+    layer.style.transform = `translate3d(${ds.ox + c0 * ds.pitch}px, ${
+      ds.oy + r0 * ds.pitch
+    }px, 0)`;
+    layer.style.visibility = 'visible';
+  }, []);
+
+  const clearGhost = useCallback(() => {
+    clearPreview();
+    const layer = ghostLayerRef.current;
+    if (layer) layer.style.visibility = 'hidden';
+  }, [clearPreview]);
   const [invalidCells, setInvalidCells] = useState<Set<number>>(new Set());
   const invalidTimerRef = useRef<number | null>(null);
 
@@ -414,8 +430,9 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       const curBoard = latestRef.current.board;
       if (fitsOnBoard(curBoard, ds.piece.c, r0, c0)) {
         ds.pos = [r0, c0];
-        const ghost = ds.piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q);
-        const ghostSet = new Set(ghost);
+        const ghostSet = new Set(
+          ds.piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q)
+        );
         const isFull = (i: number) => curBoard[i] >= 0 || ghostSet.has(i);
         const preview: number[] = [];
 
@@ -450,7 +467,8 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           }
         }
 
-        applyGhost(ghost, preview, ds.piece.k);
+        placeGhost(ds, r0, c0);
+        applyPreview(preview, ds.piece.k);
       } else {
         clearGhost();
       }
@@ -507,7 +525,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
     };
-  }, [applyGhost, clearGhost]);
+  }, [applyPreview, clearGhost, placeGhost]);
 
   const initialPointerRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
@@ -518,7 +536,8 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       const top = pt.y - ds.h * ds.cs - 56;
       dragFloatRef.current.style.transform = `translate3d(${left}px, ${top}px, 0) scale(1.06) rotate(-2deg)`;
     }
-  }, [activeDrag]);
+    if (activeDrag && ds && ds.pos) placeGhost(ds, ds.pos[0], ds.pos[1]);
+  }, [activeDrag, placeGhost]);
 
   const handleSlotPointerDown = (
     e: React.PointerEvent<HTMLDivElement>,
@@ -534,6 +553,16 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
     const cs = bEl.clientWidth / GRID_SIZE;
     const [h, w] = pieceDimensions(piece.c);
     const boardRect = bEl.getBoundingClientRect();
+    // Sub-pixel exact grid geometry (offsetLeft rounds to integers, which drifts by a
+    // few px across 8 columns and would misalign the ghost).
+    const firstRect = (bEl.children[0] as HTMLElement | undefined)?.getBoundingClientRect();
+    const secondRect = (bEl.children[1] as HTMLElement | undefined)?.getBoundingClientRect();
+    const ox = firstRect ? firstRect.left - boardRect.left : 0;
+    const oy = firstRect ? firstRect.top - boardRect.top : 0;
+    const pitch =
+      firstRect && secondRect && secondRect.left > firstRect.left
+        ? secondRect.left - firstRect.left
+        : cs;
 
     const left = e.clientX - (w * cs) / 2;
     const top = e.clientY - h * cs - 56;
@@ -554,18 +583,16 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       lastR0: r0,
       lastC0: c0,
       lastKey: `${r0},${c0}`,
+      ox,
+      oy,
+      pitch,
     };
     dragSessionRef.current = session;
     document.body.setAttribute('data-drag', '1');
-    setActiveDrag({ slotIdx, piece, cs });
+    setActiveDrag({ slotIdx, piece, cs, pitch });
 
     if (fitsOnBoard(board, piece.c, r0, c0)) {
       session.pos = [r0, c0];
-      applyGhost(
-        piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q),
-        [],
-        piece.k
-      );
     }
   };
 
@@ -883,6 +910,30 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
                 </i>
               );
             })}
+            {activeDrag && (
+              <div
+                ref={ghostLayerRef}
+                className="dghl"
+                aria-hidden="true"
+                style={{
+                  ['--col' as string]: `var(--c${activeDrag.piece.k})`,
+                  visibility: 'hidden',
+                }}
+              >
+                {activeDrag.piece.c.map(([a, q]) => (
+                  <span
+                    key={`${a}-${q}`}
+                    className="dghc"
+                    style={{
+                      left: q * activeDrag.pitch,
+                      top: a * activeDrag.pitch,
+                      width: activeDrag.pitch,
+                      height: activeDrag.pitch,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {rings.map((r) => (
