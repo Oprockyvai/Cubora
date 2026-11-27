@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GRID_SIZE, MAX_LIVES, POWER_UP_DEFS } from '../data/constants';
 import {
   BlockSkinId,
@@ -260,15 +260,58 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
     piece: Piece;
     cs: number;
   } | null>(null);
-  const [ghostState, setGhostState] = useState<{
-    ghostCells: Set<number>;
-    previewCells: Set<number>;
-    colorIdx: number;
-  }>({
-    ghostCells: new Set(),
-    previewCells: new Set(),
-    colorIdx: 0,
+  // Ghost + line-preview highlights are applied straight to the board DOM nodes.
+  // Routing them through React state re-rendered the entire HUD + 64 cells on every
+  // cell the finger crossed, which is what made block dragging feel laggy.
+  const appliedGhostRef = useRef<{ ghost: number[]; preview: number[] }>({
+    ghost: [],
+    preview: [],
   });
+
+  const clearGhost = useCallback(() => {
+    const boardEl = boardRef.current;
+    const applied = appliedGhostRef.current;
+    if (boardEl) {
+      const cells = boardEl.children;
+      for (const i of applied.ghost) {
+        const el = cells[i] as HTMLElement | undefined;
+        if (!el) continue;
+        el.classList.remove('g');
+        el.style.removeProperty('--col');
+      }
+      for (const i of applied.preview) {
+        const el = cells[i] as HTMLElement | undefined;
+        if (!el) continue;
+        el.classList.remove('pv');
+        el.style.removeProperty('--pc');
+      }
+    }
+    appliedGhostRef.current = { ghost: [], preview: [] };
+  }, [boardRef]);
+
+  const applyGhost = useCallback(
+    (ghost: number[], preview: number[], colorIdx: number) => {
+      clearGhost();
+      const boardEl = boardRef.current;
+      if (!boardEl) return;
+      const cells = boardEl.children;
+      const colVar = `var(--c${colorIdx})`;
+      for (const i of ghost) {
+        const el = cells[i] as HTMLElement | undefined;
+        if (!el) continue;
+        el.classList.add('g');
+        el.style.setProperty('--col', colVar);
+      }
+      for (const i of preview) {
+        const el = cells[i] as HTMLElement | undefined;
+        if (!el) continue;
+        el.classList.add('pv');
+        el.style.setProperty('--pc', colVar);
+      }
+      appliedGhostRef.current = { ghost, preview };
+    },
+    [boardRef, clearGhost]
+  );
   const [invalidCells, setInvalidCells] = useState<Set<number>>(new Set());
   const invalidTimerRef = useRef<number | null>(null);
 
@@ -327,14 +370,11 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
   useEffect(() => {
     if (paused || busy || activeTargetTool) {
       dragSessionRef.current = null;
+      document.body.removeAttribute('data-drag');
       setActiveDrag(null);
-      setGhostState({
-        ghostCells: new Set(),
-        previewCells: new Set(),
-        colorIdx: 0,
-      });
+      clearGhost();
     }
-  }, [paused, busy, activeTargetTool]);
+  }, [paused, busy, activeTargetTool, clearGhost]);
 
   useEffect(() => {
     return () => {
@@ -374,11 +414,10 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       const curBoard = latestRef.current.board;
       if (fitsOnBoard(curBoard, ds.piece.c, r0, c0)) {
         ds.pos = [r0, c0];
-        const ghostCells = new Set(
-          ds.piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q)
-        );
-        const isFull = (i: number) => curBoard[i] >= 0 || ghostCells.has(i);
-        const previewCells = new Set<number>();
+        const ghost = ds.piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q);
+        const ghostSet = new Set(ghost);
+        const isFull = (i: number) => curBoard[i] >= 0 || ghostSet.has(i);
+        const preview: number[] = [];
 
         for (let r = 0; r < GRID_SIZE; r++) {
           let rowFull = true;
@@ -390,7 +429,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           }
           if (rowFull) {
             for (let c = 0; c < GRID_SIZE; c++) {
-              previewCells.add(r * GRID_SIZE + c);
+              preview.push(r * GRID_SIZE + c);
             }
           }
         }
@@ -404,22 +443,16 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           }
           if (colFull) {
             for (let r = 0; r < GRID_SIZE; r++) {
-              previewCells.add(r * GRID_SIZE + c);
+              const idx = r * GRID_SIZE + c;
+              // A cell shared by a full row and a full column is only listed once.
+              if (!preview.includes(idx)) preview.push(idx);
             }
           }
         }
 
-        setGhostState({
-          ghostCells,
-          previewCells,
-          colorIdx: ds.piece.k,
-        });
+        applyGhost(ghost, preview, ds.piece.k);
       } else {
-        setGhostState({
-          ghostCells: new Set(),
-          previewCells: new Set(),
-          colorIdx: 0,
-        });
+        clearGhost();
       }
     };
 
@@ -432,12 +465,9 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       const ds = dragSessionRef.current;
       if (!ds) return;
       dragSessionRef.current = null;
+      document.body.removeAttribute('data-drag');
       setActiveDrag(null);
-      setGhostState({
-        ghostCells: new Set(),
-        previewCells: new Set(),
-        colorIdx: 0,
-      });
+      clearGhost();
 
       if (latestRef.current.paused || latestRef.current.busy) return;
 
@@ -477,7 +507,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
     };
-  }, []);
+  }, [applyGhost, clearGhost]);
 
   const initialPointerRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
@@ -526,18 +556,16 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       lastKey: `${r0},${c0}`,
     };
     dragSessionRef.current = session;
+    document.body.setAttribute('data-drag', '1');
     setActiveDrag({ slotIdx, piece, cs });
 
     if (fitsOnBoard(board, piece.c, r0, c0)) {
       session.pos = [r0, c0];
-      const ghostCells = new Set(
-        piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q)
+      applyGhost(
+        piece.c.map(([a, q]) => (r0 + a) * GRID_SIZE + c0 + q),
+        [],
+        piece.k
       );
-      setGhostState({
-        ghostCells,
-        previewCells: new Set(),
-        colorIdx: piece.k,
-      });
     }
   };
 
@@ -793,8 +821,6 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
           >
             {board.map((v, i) => {
               const t = v >= 0 ? boardItems[i] : 0;
-              const isGhost = ghostState.ghostCells.has(i);
-              const isPv = ghostState.previewCells.has(i);
               const isPop = popCells.has(i);
               const crashDelay = crashCells.get(i);
               const isCrash = crashDelay !== undefined;
@@ -809,8 +835,6 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               let cls = 'k';
               if (v >= 0) cls += ' f';
               if (t) cls += ' ti';
-              if (isGhost) cls += ' g';
-              if (isPv) cls += ' pv';
               if (isPop) cls += ' pl';
               if (isCrash) cls += ' crash';
               if (isDead) cls += ' dead';
@@ -822,19 +846,10 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               const style: React.CSSProperties = {};
               if (v >= 0) {
                 (style as Record<string, string>)['--col'] = `var(--c${v})`;
-              } else if (isGhost) {
-                (style as Record<string, string>)[
-                  '--col'
-                ] = `var(--c${ghostState.colorIdx})`;
               } else if (isHint && activeHint) {
                 (style as Record<string, string>)[
                   '--col'
                 ] = `var(--c${activeHint.piece.k})`;
-              }
-              if (isPv) {
-                (style as Record<string, string>)[
-                  '--pc'
-                ] = `var(--c${ghostState.colorIdx})`;
               }
               if (isCrash) {
                 (style as Record<string, string>)[

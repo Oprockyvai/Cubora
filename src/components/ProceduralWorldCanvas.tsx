@@ -965,7 +965,7 @@ function renderBiomeLandscape(
   );
 }
 
-export const ProceduralWorldCanvas: React.FC<ProceduralWorldCanvasProps> = ({
+const ProceduralWorldCanvasBase: React.FC<ProceduralWorldCanvasProps> = ({
   width,
   height,
   sections,
@@ -1142,3 +1142,21 @@ export const ProceduralWorldCanvas: React.FC<ProceduralWorldCanvasProps> = ({
     </svg>
   );
 };
+
+// The scenery only depends on layout geometry. LevelMap re-renders for unrelated reasons
+// (progress, jump button, toasts) and `sections` / `bridges` arrive as fresh arrays, so
+// compare by geometry signature to avoid rebuilding thousands of SVG nodes.
+const sceneSignature = (p: ProceduralWorldCanvasProps): string =>
+  `${p.width}x${p.height}|` +
+  p.sections
+    .map((x) => `${x.key}:${Math.round(x.sectionTop)}:${Math.round(x.height)}`)
+    .join(',') +
+  '|' +
+  p.bridges
+    .map((b) => `${b.key}:${Math.round(b.bridge.midX)}:${Math.round(b.bridge.midY)}`)
+    .join(',');
+
+export const ProceduralWorldCanvas = React.memo(
+  ProceduralWorldCanvasBase,
+  (prev, next) => sceneSignature(prev) === sceneSignature(next)
+);

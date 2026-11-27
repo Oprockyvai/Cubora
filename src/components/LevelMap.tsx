@@ -125,6 +125,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({
   );
   const lockedTimerRef = useRef<number | null>(null);
   const popTimerRef = useRef<number | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (prog.u < lastRevealedRef.current) {
@@ -148,6 +149,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({
     return () => {
       if (lockedTimerRef.current !== null) window.clearTimeout(lockedTimerRef.current);
       if (popTimerRef.current !== null) window.clearTimeout(popTimerRef.current);
+      if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
     };
   }, []);
 
@@ -247,18 +249,24 @@ export const LevelMap: React.FC<LevelMapProps> = ({
     setShowJumpBtn(curY < viewTop + 60 || curY > viewBot - 60);
   };
 
+  // Scroll events can fire several times per frame; doing layout reads + state updates
+  // on each one made panning stutter. Coalesce to at most one pass per animation frame.
   const handleScroll = () => {
-    updateJumpVisibility();
-    if (revealRange) return;
-    const el = scrollRef.current;
-    if (!el || prevScrollAdjustRef.current) return;
-    if (el.scrollTop < 350) {
-      prevScrollAdjustRef.current = {
-        oldH: el.scrollHeight,
-        oldTop: el.scrollTop,
-      };
-      setSections((s) => s + 1);
-    }
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      updateJumpVisibility();
+      if (revealRange) return;
+      const el = scrollRef.current;
+      if (!el || prevScrollAdjustRef.current) return;
+      if (el.scrollTop < 350) {
+        prevScrollAdjustRef.current = {
+          oldH: el.scrollHeight,
+          oldTop: el.scrollTop,
+        };
+        setSections((s) => s + 1);
+      }
+    });
   };
 
   const W2 = containerWidth;
@@ -391,6 +399,20 @@ export const LevelMap: React.FC<LevelMapProps> = ({
     }
     return out;
   }, [renderedSections, settledLimit]);
+
+  const worldSections = useMemo(
+    () =>
+      renderedSections.map((sec) => ({
+        key: sec.key,
+        id: sec.id,
+        worldIdx: sec.worldIdx,
+        sectionTop: sec.sectionTop,
+        height: Hs,
+        acc: sec.acc,
+        biome: sec.biome,
+      })),
+    [renderedSections, Hs]
+  );
 
   const revealEdge = useMemo(() => {
     if (!revealRange) return null;
@@ -634,15 +656,7 @@ export const LevelMap: React.FC<LevelMapProps> = ({
           <ProceduralWorldCanvas
             width={W2}
             height={Ht}
-            sections={renderedSections.map((sec) => ({
-              key: sec.key,
-              id: sec.id,
-              worldIdx: sec.worldIdx,
-              sectionTop: sec.sectionTop,
-              height: Hs,
-              acc: sec.acc,
-              biome: sec.biome,
-            }))}
+            sections={worldSections}
             bridges={bridges}
           />
 

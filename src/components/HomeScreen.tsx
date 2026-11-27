@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { ACHIEVEMENTS, MAX_LIVES, WORLDS } from '../data/constants';
+import { MAX_LIVES, WORLDS } from '../data/constants';
 import {
   LevelProgress,
   PageId,
@@ -85,7 +85,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   );
   const classicModeBest = Math.max(cb.lb.classic[0]?.s || 0, classicBest);
   const dailyCanClaim = getDailyRewardState(cb.daily).canClaim;
-  const unlockedAch = ACHIEVEMENTS.filter((a) => !!cb.ach[a.id]).length;
   const claimableMissions = (cb.missions?.items || []).filter(
     (m) => m.progress >= m.target && !m.claimed
   ).length;
@@ -357,9 +356,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               >
                 <TrophyIcon />
                 <span>Awards</span>
-                <em className="nv-badge">
-                  {unlockedAch}/{ACHIEVEMENTS.length}
-                </em>
               </button>
               <button
                 type="button"

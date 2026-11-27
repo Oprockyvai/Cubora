@@ -187,8 +187,10 @@ export const BackgroundCanvas: React.FC = () => {
       H = window.innerHeight;
       fxPool.width = W;
       fxPool.height = H;
-      bgc.width = Math.round(W * DPR);
-      bgc.height = Math.round(H * DPR);
+      // Ambient dots are soft & translucent, so a 1x backing store is visually identical
+      // and costs ~2x less fill-rate than the sharp FX canvas.
+      bgc.width = Math.round(W);
+      bgc.height = Math.round(H);
       fxc.width = Math.round(W * DPR);
       fxc.height = Math.round(H * DPR);
     };
@@ -230,13 +232,17 @@ export const BackgroundCanvas: React.FC = () => {
         gameplayVisible = document.body.dataset.state === 'playing' || !document.querySelector('.hscr.on, .map.on, .pg.on, .over.on');
       }
 
-      // Render ambient dots at ~30fps only while actively playing
-      if (gameplayVisible && !fxPool.reducedMotion) {
+      // Render ambient dots at ~30fps only while actively playing, and never while a
+      // block is being dragged (keeps the main thread free for pointer tracking).
+      const dragging = document.body.hasAttribute('data-drag');
+      if (dragging) {
+        lastBg = now; // freeze the ambient layer in place; no clear, no flicker
+      } else if (gameplayVisible && !fxPool.reducedMotion) {
         if (frameNum % 2 === 0) {
           const d2 = Math.min(0.1, (now - lastBg) / 1000);
           lastBg = now;
           bgDirty = true;
-          bx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          bx.setTransform(1, 0, 0, 1, 0, 0);
           bx.clearRect(0, 0, W, H);
           const pal = fxPool.palette.length ? fxPool.palette : DEFAULT_COLORS;
           for (let ci = 0; ci < pal.length; ci++) {
