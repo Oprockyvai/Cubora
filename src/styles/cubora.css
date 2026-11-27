@@ -486,8 +486,8 @@ h1 {
 }
 
 .k.g::before {
-  background: color-mix(in srgb, var(--col) 18%, transparent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--col) 40%, transparent);
+  background: color-mix(in srgb, var(--col) 24%, transparent);
+  box-shadow: none;
   border: 2px dashed color-mix(in srgb, var(--col) 88%, #fff);
 }
 
@@ -3976,38 +3976,59 @@ h1 {
 }
 
 .hnav {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 10px 24px rgba(0, 0, 0, 0.3);
 }
 
 .nv {
   position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  padding: 14px 4px 8px;
-  min-height: 64px;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 0 7px;
+  min-height: 56px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: 0;
   color: var(--text);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  transition: background-color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s, transform 0.12s;
+}
+
+.nv span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.88;
 }
 
 .nv:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 200, 69, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nv:active {
+  background: rgba(255, 200, 69, 0.14);
+  transform: scale(0.94);
 }
 
 .nv svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: var(--gold);
   stroke-width: 1.9;
@@ -4018,27 +4039,12 @@ h1 {
 .nv .dot {
   position: absolute;
   top: 6px;
-  right: 8px;
+  right: calc(50% - 18px);
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
   box-shadow: 0 0 0 2px var(--bg);
-}
-
-.nv-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-style: normal;
-  font-size: 8.5px;
-  line-height: 1;
-  font-weight: 800;
-  color: var(--c1);
-  background: rgba(9, 14, 29, 0.92);
-  border: 1px solid rgba(52, 211, 255, 0.25);
-  padding: 2px 4px;
-  border-radius: 6px;
 }
 
 /* ===========================
@@ -4784,7 +4790,7 @@ h1 {
   .play { min-height: 46px; font-size: 16px; }
   .hin { gap: 8px; }
   .mode { min-height: 86px; padding: 9px 4px; }
-  .nv { min-height: 52px; padding: 10px 4px 7px; }
+  .nv { min-height: 50px; padding: 7px 0 5px; }
 }
 
 @media (max-height: 860px) {
@@ -6416,3 +6422,131 @@ h1 {
   }
 }
 
+/* ===========================
+   PERFORMANCE OVERRIDES
+   ===========================
+   The map scenery is one very tall SVG. Animating individual SVG children (sway, drift,
+   flow, twinkle...) forces Chromium/WebView to repaint that whole layer every frame, which
+   dropped scrolling to ~30fps on phones. The scene is now static; only the player's own
+   level node (an HTML element, composited on the GPU) keeps its idle bob. */
+.world-canvas *,
+.mpath-flow {
+  animation: none !important;
+}
+
+.mk .mk-bob,
+.mk.locked .mk-bob {
+  animation: none;
+  will-change: auto;
+}
+
+.mk.cur .mk-bob {
+  will-change: transform;
+}
+
+.mk.done {
+  filter: none;
+}
+
+.mapin {
+  contain: layout paint style;
+}
+
+/* While a block is being dragged, freeze decorative idle loops so the main thread only
+   tracks the finger. */
+body[data-drag] .pu-art *,
+body[data-drag] .k .itm,
+body[data-drag] .k.ti::before,
+body[data-drag] .k.hint-cell::before,
+body[data-drag] .meter-surge {
+  animation-play-state: paused !important;
+}
+
+/* Current-level pulse ring: the old version animated an SVG circle inside the huge road
+   SVG (full repaint per frame). This HTML ring animates transform/opacity only, so it runs
+   on the GPU compositor and never repaints the map. */
+.cur-halo {
+  display: none;
+}
+
+.mk.cur .mk-bob::before {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  z-index: -2;
+  border-radius: 50%;
+  border: 2.5px solid #ffd23f;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: curRing 1.85s ease-out infinite;
+}
+
+@keyframes curRing {
+  0% { opacity: 0.9; transform: scale(0.9); }
+  75%, 100% { opacity: 0; transform: scale(1.42); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk.cur .mk-bob::before {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* ===========================
+   LEVEL MAP POLISH
+   =========================== */
+.mh {
+  padding: 10px 14px 9px;
+  background: linear-gradient(180deg, rgba(14, 20, 48, 0.98), rgba(7, 11, 28, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mh h3 {
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff, #b9c6ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mstars,
+.mlv,
+.mstreak {
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.map-streak-bar {
+  position: relative;
+  padding: 6px 14px;
+  border-bottom: 1px solid rgba(255, 202, 74, 0.16);
+}
+
+/* soft fade so the scenery tucks neatly under the sticky header */
+.map-streak-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 26px;
+  background: linear-gradient(180deg, rgba(5, 8, 24, 0.55), rgba(5, 8, 24, 0));
+  pointer-events: none;
+}
+
+.map-jump-btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(26, 34, 74, 0.96), rgba(12, 18, 44, 0.96));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.wbn {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
