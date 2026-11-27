@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { BackgroundCanvas, fxPool } from './components/BackgroundCanvas';
 import { GameBoardView } from './components/GameBoardView';
 import { HomeScreen } from './components/HomeScreen';
 import { GemIcon, SharedSvgDefs } from './components/Icons';
 import { LevelMap } from './components/LevelMap';
 import { Modals } from './components/Modals';
+import { memoStable } from './components/memoStable';
 import { Pages } from './components/Pages';
 import { PowerUpModal } from './components/PowerUpModal';
 import { SplashScreen } from './components/SplashScreen';
@@ -98,6 +99,14 @@ import {
   getWinStreakMilestoneEvent,
   shouldResetStreakOnExit,
 } from './utils/streakLogic';
+
+
+// Heavy screens only re-render when their own data changes (not on every App tick).
+const GameBoardViewM = memoStable(GameBoardView);
+const HomeScreenM = memoStable(HomeScreen, (p) => !p.visible);
+const LevelMapM = memoStable(LevelMap, (p) => !p.visible);
+const PagesM = memoStable(Pages, (p) => p.activePage === null);
+const SharedSvgDefsM = memo(SharedSvgDefs);
 
 export function App() {
   const [cb, setCb] = useState<SaveState>(() => loadSaveState());
@@ -337,10 +346,26 @@ export function App() {
     );
   }, [screen, mode, lv]);
 
-  // Persist cb changes
+  // Persist cb changes. Trailing throttle (<= 1.5s stale) instead of a synchronous
+  // JSON.stringify + localStorage write on every state change (the play clock alone
+  // changes cb once per second, which caused a periodic main-thread hitch).
+  const saveTimerRef = useRef<number | null>(null);
   useEffect(() => {
-    saveGameState(cb);
+    if (saveTimerRef.current !== null) return;
+    saveTimerRef.current = window.setTimeout(() => {
+      saveTimerRef.current = null;
+      saveGameState(cbRef.current);
+    }, 1500);
   }, [cb]);
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+        saveGameState(cbRef.current);
+      }
+    };
+  }, []);
 
   // Periodic save & time-played counter
   useEffect(() => {
@@ -2328,10 +2353,10 @@ export function App() {
 
   return (
     <>
-      <SharedSvgDefs />
+      <SharedSvgDefsM />
       <BackgroundCanvas />
 
-      <GameBoardView
+      <GameBoardViewM
         board={board}
         boardItems={boardItems}
         pieces={pieces}
@@ -2384,7 +2409,7 @@ export function App() {
         onOpenPowerUpWorkshop={() => setShowPowerUpModal(true)}
       />
 
-      <HomeScreen
+      <HomeScreenM
         visible={screen === 'home'}
         cb={cb}
         prog={prog}
@@ -2410,7 +2435,7 @@ export function App() {
         onInteract={handleInteract}
       />
 
-      <LevelMap
+      <LevelMapM
         visible={screen === 'map'}
         prog={prog}
         lives={livesState.n}
@@ -2421,7 +2446,7 @@ export function App() {
         onInteract={handleInteract}
       />
 
-      <Pages
+      <PagesM
         activePage={activePage}
         cb={cb}
         prog={prog}
