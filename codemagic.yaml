@@ -18,7 +18,7 @@ workflows:
     scripts:
       - name: Install Node dependencies & run verification tests
         script: |
-          npm ci
+          npm install --no-audit --no-fund
           npx --yes tsx --test src/utils/*.test.ts
           npm run lint
           npm run build
@@ -68,7 +68,7 @@ workflows:
     scripts:
       - name: Build offline game assets
         script: |
-          npm ci
+          npm install --no-audit --no-fund
           npm run lint
           npm run build:android
       - name: Bootstrap Android & build debug APK
