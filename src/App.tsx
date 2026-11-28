@@ -349,6 +349,18 @@ export function App() {
   // Persist cb changes. Trailing throttle (<= 1.5s stale) instead of a synchronous
   // JSON.stringify + localStorage write on every state change (the play clock alone
   // changes cb once per second, which caused a periodic main-thread hitch).
+  // Tells the ambient background canvas when the plain game board is on screen.
+  useEffect(() => {
+    const ambient =
+      screen === 'game' &&
+      activePage === null &&
+      !overState.open &&
+      !failState.open &&
+      !winState.open;
+    if (ambient) document.body.setAttribute('data-ambient', '1');
+    else document.body.removeAttribute('data-ambient');
+  }, [screen, activePage, overState.open, failState.open, winState.open]);
+
   const saveTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (saveTimerRef.current !== null) return;
