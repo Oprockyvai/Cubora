@@ -8,7 +8,7 @@ workflows:
       node: 22
       java: 21
       vars:
-        PACKAGE_NAME: "com.blockclash.game"
+        PACKAGE_NAME: "cubora.blockblast.game"
         # TEST ads until the app is live on Play. Flip to "false" ONLY for the real
         # Play Store release (never click your own live ads - it can ban the account).
         ADS_TEST: "true"
@@ -43,7 +43,7 @@ workflows:
       - name: Bootstrap & configure Android project
         script: |
           if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org com.blockclash.game --project-name cubora
+            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
           fi
           node scripts/configure-android-ci.mjs
       - name: Build Release APK & Play Store App Bundle (AAB)
@@ -82,7 +82,7 @@ workflows:
           flutter pub get
           flutter test
           if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org com.blockclash.game --project-name cubora
+            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
           fi
           node scripts/configure-android-ci.mjs
           flutter build apk --debug
