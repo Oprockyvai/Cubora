@@ -75,10 +75,10 @@ function patchGradle() {
 
   // Enforce clean applicationId and minSdk >= 23 (required by the Mobile Ads SDK)
   if (isKts) {
-    gradle = gradle.replace(/applicationId\s*=\s*"[^"]*"/, 'applicationId = "com.blockclash.game"');
+    gradle = gradle.replace(/applicationId\s*=\s*"[^"]*"/, 'applicationId = "cubora.blockblast.game"');
     gradle = gradle.replace(/minSdk\s*=\s*flutter\.minSdkVersion/, 'minSdk = maxOf(flutter.minSdkVersion, 23)');
   } else {
-    gradle = gradle.replace(/applicationId\s+["'][^"']*["']/, 'applicationId "com.blockclash.game"');
+    gradle = gradle.replace(/applicationId\s+["'][^"']*["']/, 'applicationId "cubora.blockblast.game"');
     gradle = gradle.replace(/minSdkVersion\s+flutter\.minSdkVersion/, 'minSdkVersion Math.max(flutter.minSdkVersion, 23)');
   }
 
@@ -133,7 +133,7 @@ function patchGradle() {
   }
 
   fs.writeFileSync(gradlePath, gradle, 'utf8');
-  console.log(`Configured ${path.basename(gradlePath)} (com.blockclash.game, minSdk >= 23)`);
+  console.log(`Configured ${path.basename(gradlePath)} (cubora.blockblast.game, minSdk >= 23)`);
 }
 
 function installLauncherIcons() {
