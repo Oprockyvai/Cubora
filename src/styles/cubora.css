@@ -514,13 +514,12 @@ h1 {
   background:
     radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.6) 0 4%, transparent 11%),
     linear-gradient(160deg, color-mix(in srgb, var(--pc) 80%, #fff), var(--pc) 55%, color-mix(in srgb, var(--pc) 75%, #000));
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pc) 60%, #fff), 0 0 9px color-mix(in srgb, var(--pc) 50%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pc) 60%, #fff);
 }
 
 @keyframes fillpop {
   50% {
     transform: scale(1.18);
-    filter: brightness(1.7);
   }
 }
 
@@ -535,7 +534,6 @@ h1 {
 
 @keyframes crash {
   0% {
-    filter: brightness(2.3);
     transform: scale(1.08);
   }
   100% {
@@ -551,11 +549,11 @@ h1 {
 @keyframes pl2 {
   0% {
     transform: scale(0.55);
-    filter: brightness(1.7);
+    opacity: 0.65;
   }
   100% {
     transform: scale(1);
-    filter: none;
+    opacity: 1;
   }
 }
 
@@ -4612,11 +4610,16 @@ h1 {
 
 .lts {
   display: flex;
+  flex: none;
   gap: 8px;
   overflow-x: auto;
   padding: 2px 0 6px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Children of a scrolling flex column must never be squashed to fit; the column scrolls instead. */
+.pgc > * { flex-shrink: 0; }
 
 .lts::-webkit-scrollbar { display: none; }
 
