@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
+import '../core/ads_policy.dart';
+import '../core/ads_service.dart';
 import '../core/game_bridge.dart';
 import '../core/theme.dart';
 import 'error_view.dart';
@@ -39,12 +41,55 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       final controller = _createController();
       _web = controller;
       unawaited(controller.loadFlutterAsset(_entry));
+      // Start ads after the first frame so consent UI has an Activity to attach to.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AdsService.instance.onStateChanged = _pushAdState;
+        unawaited(AdsService.instance.start());
+      });
+    }
+  }
+
+  /// Tells the game which ad formats are ready (it hides ad buttons otherwise).
+  void _pushAdState(bool rewardedReady, bool interstitialReady) {
+    final c = _web;
+    if (c == null || !mounted) return;
+    unawaited(
+      c
+          .runJavaScript(
+            'window.__cuboraAdState && window.__cuboraAdState($rewardedReady,$interstitialReady)',
+          )
+          .catchError((Object _) {}),
+    );
+  }
+
+  Future<void> _onJsMessage(String message) async {
+    final ad = AdMessage.parse(message);
+    if (ad == null) return GameBridge.onMessage(message);
+    final c = _web;
+    if (c == null) return;
+    switch (ad) {
+      case AdQuery():
+        _pushAdState(
+          AdsService.instance.rewardedReady,
+          AdsService.instance.interstitialReady,
+        );
+      case AdInterstitial():
+        await GameBridge.pause(c);
+        await AdsService.instance.maybeShowInterstitial();
+        if (mounted) await GameBridge.resume(c);
+      case AdRewarded(:final requestId):
+        await GameBridge.pause(c);
+        final outcome = await AdsService.instance.showRewarded();
+        if (!mounted) return;
+        await GameBridge.resume(c);
+        await GameBridge.adResult(c, requestId, outcome);
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AdsService.instance.onStateChanged = null;
     super.dispose();
   }
 
@@ -55,7 +100,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       ..enableZoom(false)
       ..addJavaScriptChannel(
         GameBridge.channelName,
-        onMessageReceived: (m) => GameBridge.onMessage(m.message),
+        onMessageReceived: (m) => unawaited(_onJsMessage(m.message)),
       )
       ..setNavigationDelegate(
         NavigationDelegate(
