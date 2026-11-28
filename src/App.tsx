@@ -12,7 +12,9 @@ import { SplashScreen } from './components/SplashScreen';
 import {
   AD_GEMS_REWARD,
   adGemsLeftToday,
+  adLivesLeftToday,
   consumeAdGemsToday,
+  consumeAdLifeToday,
   installAdsBridge,
   notifyGameOverForInterstitial,
   requestRewardedAd,
@@ -23,6 +25,7 @@ import {
   DAILY_REWARDS,
   DEFAULT_COLORS,
   GRID_SIZE,
+  LIFE_GEM_COST,
   LIFE_REGEN_MS,
   MAX_LIVES,
   POWER_UP_DEFS,
@@ -242,6 +245,8 @@ export function App() {
     score: number;
     best: number;
     lbRank: number;
+    /** Set when a Level start was refused because no lives are left. */
+    needsLife?: boolean;
   }>({
     open: false,
     mode: 'start',
@@ -262,6 +267,7 @@ export function App() {
   cbRef.current = cb;
   const progRef = useRef(prog);
   progRef.current = prog;
+  const pendingStartRef = useRef<{ mode: GameMode; level?: number; duration?: number } | null>(null);
   const livesRef = useRef(livesState);
   livesRef.current = livesState;
   const classicBestRef = useRef(classicBest);
@@ -503,7 +509,8 @@ export function App() {
       if (res.newlyUnlocked.length > 0) {
         vibratePattern([20, 40, 20], nextCb.set);
         audioEngine.sfx('achievement');
-        res.newlyUnlocked.forEach((ach, idx) => {
+        // Cap the toast stack (a big jump can unlock many endless tiers at once).
+        res.newlyUnlocked.slice(0, 4).forEach((ach, idx) => {
           const id = Date.now() + Math.random() + idx;
           setAchToasts((prev) => [...prev, { id, ach, delayIdx: idx }]);
           window.setTimeout(() => {
@@ -657,19 +664,27 @@ export function App() {
       runGemsEarnedRef.current = 0;
       rewardedMoveTokensRef.current = new Set();
 
-      if (livesRef.current.n < 1) {
+      // Lives only gate Level mode; Classic and Timer are always playable.
+      if (targetMode === 'level' && livesRef.current.n < 1) {
+        pendingStartRef.current = {
+          mode: targetMode,
+          level: targetLevelNum,
+          duration: targetDuration,
+        };
         setScreen('game');
         setOverState({
           open: true,
           mode: 'over',
-          title: 'Game over',
-          scoreLabel: 'Your final score',
+          title: 'Out of lives',
+          scoreLabel: 'Level mode needs a life',
           score: gameRef.current.score,
           best: modeBest(targetMode, targetDuration ?? gameRef.current.timerDur),
           lbRank: 0,
+          needsLife: true,
         });
         return;
       }
+      pendingStartRef.current = null;
 
       const freshBoard = Array(64).fill(-1);
       const freshItems = Array(64).fill(0);
@@ -1917,6 +1932,27 @@ export function App() {
     return true;
   }, [reviveBoard, showGemToast]);
 
+  // Buy one life with gems (Level mode only needs them).
+  const handleBuyLife = useCallback(() => {
+    const cur = livesRef.current;
+    if (cur.n >= MAX_LIVES) {
+      showGemToast('Lives are full');
+      return;
+    }
+    if (cbRef.current.gems < LIFE_GEM_COST) {
+      showGemToast(`Need ${LIFE_GEM_COST} gems`);
+      return;
+    }
+    setCb((prev) => ({ ...prev, gems: Math.max(0, prev.gems - LIFE_GEM_COST) }));
+    const nextN = cur.n + 1;
+    const updated = { n: nextN, t: nextN >= MAX_LIVES ? 0 : cur.t || Date.now() };
+    livesRef.current = updated;
+    setLivesState(updated);
+    saveLives(updated);
+    audioEngine.sfx('reward');
+    showGemToast('+1 Life');
+  }, [showGemToast]);
+
   const adBusyRef = useRef(false);
 
   // Rewarded ad instead of 10 gems: same revive, granted only if the ad was completed.
@@ -1964,6 +2000,35 @@ export function App() {
     }
   }, [showGemToast]);
 
+  // Rewarded ad for one life (capped per day), only offered when out of lives.
+  const handleWatchAdForLife = useCallback(async (): Promise<void> => {
+    if (adBusyRef.current) return;
+    if (adLivesLeftToday() <= 0) {
+      showGemToast('No more ad lives today');
+      return;
+    }
+    if (livesRef.current.n >= MAX_LIVES) return;
+    adBusyRef.current = true;
+    try {
+      const outcome = await requestRewardedAd();
+      if (outcome !== 'rewarded') {
+        if (outcome === 'failed') showGemToast('Ad not available');
+        return;
+      }
+      consumeAdLifeToday();
+      const cur = livesRef.current;
+      const nextN = Math.min(MAX_LIVES, cur.n + 1);
+      const updated = { n: nextN, t: nextN >= MAX_LIVES ? 0 : cur.t || Date.now() };
+      livesRef.current = updated;
+      setLivesState(updated);
+      saveLives(updated);
+      audioEngine.sfx('reward');
+      showGemToast('+1 Life');
+    } finally {
+      adBusyRef.current = false;
+    }
+  }, [showGemToast]);
+
   useEffect(() => installAdsBridge(), []);
 
   const handleGiveUp = useCallback(() => {
@@ -1972,25 +2037,29 @@ export function App() {
     setUndoSnapshot(null);
     setActiveHint(null);
     setFailState((prev) => ({ ...prev, open: false }));
-    setHeartBreakRunId((id) => id + 1);
-    setShowHeartBreak(true);
-    audioEngine.playBreakSequence();
-    vibratePattern([40, 60, 80], cbRef.current.set);
+    // Only Level mode costs a life; Classic/Timer end straight at the result screen.
+    const costsLife = gameRef.current.mode === 'level';
+    if (costsLife) {
+      setHeartBreakRunId((id) => id + 1);
+      setShowHeartBreak(true);
+      audioEngine.playBreakSequence();
+      vibratePattern([40, 60, 80], cbRef.current.set);
+
+      scheduleTimeout(() => {
+        const hEl = document.querySelector('#brk .bh') as HTMLElement | null;
+        if (hEl) {
+          const rect = hEl.getBoundingClientRect();
+          fxPool.spawnHeartShatter(
+            rect.left + rect.width / 2,
+            rect.top + rect.height * 0.5
+          );
+        }
+        vibratePattern(60, cbRef.current.set);
+      }, 800);
+    }
 
     scheduleTimeout(() => {
-      const hEl = document.querySelector('#brk .bh') as HTMLElement | null;
-      if (hEl) {
-        const rect = hEl.getBoundingClientRect();
-        fxPool.spawnHeartShatter(
-          rect.left + rect.width / 2,
-          rect.top + rect.height * 0.5
-        );
-      }
-      vibratePattern(60, cbRef.current.set);
-    }, 800);
-
-    scheduleTimeout(() => {
-      consumeLife();
+      if (costsLife) consumeLife();
       const sc = gameRef.current.score;
       const curMode = gameRef.current.mode;
       const curLv = gameRef.current.lv;
@@ -2060,7 +2129,7 @@ export function App() {
           lbRank: rank,
         });
       }
-    }, 2400);
+    }, costsLife ? 2400 : 0);
   }, [
     addLeaderboardEntry,
     checkAchievements,
@@ -2645,9 +2714,18 @@ export function App() {
           nextLifeText,
         }}
         onOverPlay={() => {
-          if (overState.mode === 'over') notifyGameOverForInterstitial();
-          startNewGame(mode, lv?.n, mode === 'timer' ? timerDur : undefined);
+          const pending = overState.needsLife ? pendingStartRef.current : null;
+          if (overState.mode === 'over' && !pending) notifyGameOverForInterstitial();
+          if (pending) {
+            pendingStartRef.current = null;
+            startNewGame(pending.mode, pending.level, pending.duration);
+          } else {
+            startNewGame(mode, lv?.n, mode === 'timer' ? timerDur : undefined);
+          }
         }}
+        onBuyLife={handleBuyLife}
+        onWatchAdForLife={handleWatchAdForLife}
+        livesApply={mode === 'level'}
         onOverMenu={showHomeMenu}
         selectedAchievement={selectedAchievement}
         onCloseAchievementDetail={() => setSelectedAchievement(null)}
