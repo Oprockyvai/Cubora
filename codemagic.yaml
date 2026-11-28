@@ -56,3 +56,53 @@ workflows:
       - build/app/outputs/flutter-apk/app-debug.apk
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
+
+  android-play-release:
+    name: Block Clash — Play Store Release (signed AAB + APK)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      node: 22
+      java: 21
+      # Create this keystore FIRST in Codemagic (Teams > Code signing identities >
+      # Android keystores > Generate keystore) and name its reference EXACTLY:
+      android_signing:
+        - blockclash_upload
+      vars:
+        PACKAGE_NAME: "cubora.blockblast.game"
+        # Keep "true" while testing on Play (internal/closed testing).
+        # Set "false" only for the real public release.
+        ADS_TEST: "true"
+        ADS_CHILD_DIRECTED: "false"
+    scripts:
+      - name: Install Node dependencies & run verification tests
+        script: |
+          npm install --no-audit --no-fund
+          npx --yes tsx --test src/utils/*.test.ts
+          npm run lint
+          npm run build
+      - name: Build offline WebView game bundle (assets/game/index.html)
+        script: |
+          npm run build:android
+      - name: Run Flutter tests
+        script: |
+          flutter pub get
+          flutter test
+      - name: Bootstrap & configure Android project (release signing)
+        script: |
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
+          fi
+          node scripts/configure-android-ci.mjs
+          grep -q 'signingConfigs.getByName("release")' android/app/build.gradle.kts \
+            || { echo "ERROR: release signing was not applied"; exit 1; }
+      - name: Build signed Release AAB and APK
+        script: |
+          ADS_DEFINES="--dart-define=ADS_TEST=$ADS_TEST --dart-define=ADS_CHILD_DIRECTED=$ADS_CHILD_DIRECTED"
+          # Play needs a strictly increasing versionCode for every upload.
+          flutter build appbundle --release --build-number=$BUILD_NUMBER $ADS_DEFINES
+          flutter build apk --release --build-number=$BUILD_NUMBER $ADS_DEFINES
+    artifacts:
+      - build/app/outputs/bundle/release/app-release.aab
+      - build/app/outputs/flutter-apk/app-release.apk
