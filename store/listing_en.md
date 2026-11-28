@@ -15,7 +15,7 @@ Block Clash is a tactile, jewel-crafted 8x8 block puzzle built for quick breaks 
 THREE DISTINCT GAME MODES
 - LEVELS: Journey vertically across four illustrated realms — Crystal Valley, Cloud City, Volcano, and Abyss — with quick realm switcher tabs. Tackle unique level goals (points, line clears, collectible relics, color targets, and combo streaks) with limited moves and up to 3 stars per stage.
 - TIMER RUSH: Race against 90-second, 3-minute, or 5-minute clocks. Every cleared line adds +2 seconds of bonus time!
-- CLASSIC ENDLESS: Pure 8x8 puzzle strategy at your own pace with 5 regenerating lives and gem revives to extend record runs.
+- CLASSIC ENDLESS: Pure 8x8 puzzle strategy at your own pace with no lives needed and gem or optional ad revives to extend record runs. (Lives apply to Level mode only.)
 
 BUILT FOR TACTILE FEEL
 - Crisp faceted blocks with distinct material themes (Aurora, Sunset Blaze, Deep Forest, and Ocean Glass)
