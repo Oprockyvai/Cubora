@@ -235,10 +235,17 @@ export const LevelMap: React.FC<LevelMapProps> = ({
     }
   }, [sections]);
 
+  // The map holds thousands of SVG nodes; re-running querySelector on every scroll frame
+  // walks all of them. Cache the current-level node and only re-query when it is stale.
+  const curNodeRef = useRef<HTMLElement | null>(null);
   const updateJumpVisibility = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const cur = el.querySelector('.mk.cur') as HTMLElement | null;
+    let cur = curNodeRef.current;
+    if (!cur || !cur.isConnected || !cur.classList.contains('cur')) {
+      cur = el.querySelector('.mk.cur') as HTMLElement | null;
+      curNodeRef.current = cur;
+    }
     if (!cur) {
       setShowJumpBtn(true);
       return;

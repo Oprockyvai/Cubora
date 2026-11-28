@@ -228,9 +228,9 @@ export const BackgroundCanvas: React.FC = () => {
       last = now;
       frameNum++;
 
-      if (frameNum % 20 === 1) {
-        gameplayVisible = document.body.dataset.state === 'playing' || !document.querySelector('.hscr.on, .map.on, .pg.on, .over.on');
-      }
+      // App toggles this attribute. (A DOM query here walked the whole document, which
+      // includes the huge map SVG, and caused a hitch every ~20 frames.)
+      gameplayVisible = document.body.hasAttribute('data-ambient');
 
       // Render ambient dots at ~30fps only while actively playing, and never while a
       // block is being dragged (keeps the main thread free for pointer tracking).

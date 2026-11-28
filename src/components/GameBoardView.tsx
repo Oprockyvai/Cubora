@@ -58,8 +58,12 @@ interface DragSession {
   cs: number;
   w: number;
   h: number;
-  boardRect: DOMRect;
+  /** Rect of the real 8x8 cell grid (inside the board's padding), in viewport px. */
+  boardRect: { left: number; top: number; right: number; bottom: number };
   pos: [number, number] | null;
+  /** Last snapped (row, col) candidate, used for hysteresis. NaN before the first move. */
+  snapR: number;
+  snapC: number;
   lastLeft: number;
   lastTop: number;
   lastR0: number;
@@ -69,6 +73,41 @@ interface DragSession {
   ox: number;
   oy: number;
   pitch: number;
+}
+
+
+/**
+ * Maps the dragged piece's top-left (viewport px) to a grid cell.
+ * - Hysteresis: once snapped, the piece only moves to another cell after the finger has
+ *   travelled ~0.6 cell away, so tiny finger jitter never makes the ghost flicker.
+ * - Edge forgiveness: a piece hanging up to one cell outside the grid is pulled inside, so
+ *   sliding a block along the board frame feels magnetic instead of "catching" on it.
+ */
+function snapToGrid(
+  left: number,
+  top: number,
+  grid: { left: number; top: number },
+  cs: number,
+  w: number,
+  h: number,
+  prevR: number,
+  prevC: number
+): { r0: number; c0: number } {
+  const fr = (top - grid.top) / cs;
+  const fc = (left - grid.left) / cs;
+  let r0 = Math.round(fr);
+  let c0 = Math.round(fc);
+  if (!Number.isNaN(prevR) && Math.abs(fr - prevR) <= 0.6 && Math.abs(fc - prevC) <= 0.6) {
+    r0 = prevR;
+    c0 = prevC;
+  }
+  const maxR = GRID_SIZE - h;
+  const maxC = GRID_SIZE - w;
+  if (r0 < 0 && fr > -1) r0 = 0;
+  else if (r0 > maxR && fr < maxR + 1) r0 = maxR;
+  if (c0 < 0 && fc > -1) c0 = 0;
+  else if (c0 > maxC && fc < maxC + 1) c0 = maxC;
+  return { r0, c0 };
 }
 
 interface PieceGridProps {
@@ -417,9 +456,18 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       if (dragFloatRef.current) {
         dragFloatRef.current.style.transform = `translate3d(${left}px, ${top}px, 0) scale(1.06) rotate(-2deg)`;
       }
-      const b = ds.boardRect;
-      const c0 = Math.round((left - b.left) / ds.cs);
-      const r0 = Math.round((top - b.top) / ds.cs);
+      const { r0, c0 } = snapToGrid(
+        left,
+        top,
+        ds.boardRect,
+        ds.cs,
+        ds.w,
+        ds.h,
+        ds.snapR,
+        ds.snapC
+      );
+      ds.snapR = r0;
+      ds.snapC = c0;
       ds.lastR0 = r0;
       ds.lastC0 = c0;
       const key = `${r0},${c0}`;
@@ -550,11 +598,11 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
     if (!bEl) return;
     e.preventDefault();
 
-    const cs = bEl.clientWidth / GRID_SIZE;
     const [h, w] = pieceDimensions(piece.c);
     const boardRect = bEl.getBoundingClientRect();
-    // Sub-pixel exact grid geometry (offsetLeft rounds to integers, which drifts by a
-    // few px across 8 columns and would misalign the ghost).
+    // Sub-pixel exact geometry of the *real* cells (the board has padding, so
+    // clientWidth / 8 is slightly larger than the true cell pitch; that mismatch made the
+    // carried block drift out of sync with the grid towards the far edges).
     const firstRect = (bEl.children[0] as HTMLElement | undefined)?.getBoundingClientRect();
     const secondRect = (bEl.children[1] as HTMLElement | undefined)?.getBoundingClientRect();
     const ox = firstRect ? firstRect.left - boardRect.left : 0;
@@ -562,12 +610,18 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
     const pitch =
       firstRect && secondRect && secondRect.left > firstRect.left
         ? secondRect.left - firstRect.left
-        : cs;
+        : bEl.clientWidth / GRID_SIZE;
+    const cs = pitch;
+    const gridRect = {
+      left: boardRect.left + ox,
+      top: boardRect.top + oy,
+      right: boardRect.left + ox + pitch * GRID_SIZE,
+      bottom: boardRect.top + oy + pitch * GRID_SIZE,
+    };
 
     const left = e.clientX - (w * cs) / 2;
     const top = e.clientY - h * cs - 56;
-    const c0 = Math.round((left - boardRect.left) / cs);
-    const r0 = Math.round((top - boardRect.top) / cs);
+    const { r0, c0 } = snapToGrid(left, top, gridRect, cs, w, h, NaN, NaN);
 
     initialPointerRef.current = { x: e.clientX, y: e.clientY };
     const session: DragSession = {
@@ -576,7 +630,9 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
       cs,
       w,
       h,
-      boardRect,
+      boardRect: gridRect,
+      snapR: r0,
+      snapC: c0,
       pos: null,
       lastLeft: left,
       lastTop: top,
