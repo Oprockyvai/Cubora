@@ -40,8 +40,28 @@ function patchManifest() {
     return `<activity${nextAttrs}>`;
   });
 
+  // AdMob application id (required by the Mobile Ads SDK, otherwise the app crashes on launch).
+  // Not a secret; override with ADMOB_APP_ID. The default is the Block Clash AdMob app.
+  const admobAppId = process.env.ADMOB_APP_ID || 'ca-app-pub-4704475463086875~5892914831';
+  if (!/^ca-app-pub-\d{16}~\d{10}$/.test(admobAppId)) {
+    throw new Error(`Invalid ADMOB_APP_ID: ${admobAppId}`);
+  }
+  if (!xml.includes('com.google.android.gms.ads.APPLICATION_ID')) {
+    xml = xml.replace(
+      '</application>',
+      `    <meta-data\n            android:name="com.google.android.gms.ads.APPLICATION_ID"\n            android:value="${admobAppId}"/>\n    </application>`
+    );
+  }
+
+  // Ads need the network (the Mobile Ads SDK also merges these, but be explicit).
+  for (const perm of ['android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE']) {
+    if (!xml.includes(perm)) {
+      xml = xml.replace(/<manifest\b[^>]*>/, (m) => `${m}\n    <uses-permission android:name="${perm}"/>`);
+    }
+  }
+
   fs.writeFileSync(manifestPath, xml, 'utf8');
-  console.log('Configured AndroidManifest.xml (Block Clash, hardwareAccelerated, portrait)');
+  console.log('Configured AndroidManifest.xml (Block Clash, portrait, AdMob app id, network permissions)');
 }
 
 function patchGradle() {
@@ -53,13 +73,13 @@ function patchGradle() {
 
   let gradle = fs.readFileSync(gradlePath, 'utf8');
 
-  // Enforce clean applicationId and minSdk >= 21 for modern Android WebView
+  // Enforce clean applicationId and minSdk >= 23 (required by the Mobile Ads SDK)
   if (isKts) {
     gradle = gradle.replace(/applicationId\s*=\s*"[^"]*"/, 'applicationId = "com.blockclash.game"');
-    gradle = gradle.replace(/minSdk\s*=\s*flutter\.minSdkVersion/, 'minSdk = maxOf(flutter.minSdkVersion, 21)');
+    gradle = gradle.replace(/minSdk\s*=\s*flutter\.minSdkVersion/, 'minSdk = maxOf(flutter.minSdkVersion, 23)');
   } else {
     gradle = gradle.replace(/applicationId\s+["'][^"']*["']/, 'applicationId "com.blockclash.game"');
-    gradle = gradle.replace(/minSdkVersion\s+flutter\.minSdkVersion/, 'minSdkVersion Math.max(flutter.minSdkVersion, 21)');
+    gradle = gradle.replace(/minSdkVersion\s+flutter\.minSdkVersion/, 'minSdkVersion Math.max(flutter.minSdkVersion, 23)');
   }
 
   // Optional CI keystore signing (populated automatically if Codemagic keystore env vars are set)
@@ -113,7 +133,7 @@ function patchGradle() {
   }
 
   fs.writeFileSync(gradlePath, gradle, 'utf8');
-  console.log(`Configured ${path.basename(gradlePath)} (com.blockclash.game, minSdk >= 21)`);
+  console.log(`Configured ${path.basename(gradlePath)} (com.blockclash.game, minSdk >= 23)`);
 }
 
 function installLauncherIcons() {
