@@ -1,7 +1,7 @@
 workflows:
-  android-release:
-    name: Block Clash — Android Release (APK + AAB)
-    max_build_duration: 30
+  android-all:
+    name: Block Clash — Debug APK + Release APK + AAB
+    max_build_duration: 45
     instance_type: mac_mini_m2
     environment:
       flutter: stable
@@ -46,45 +46,18 @@ workflows:
             flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
           fi
           node scripts/configure-android-ci.mjs
-      - name: Build Release APK & Play Store App Bundle (AAB)
+      - name: Build Debug APK, Release APK and Play Store AAB
         script: |
           ADS_DEFINES="--dart-define=ADS_TEST=$ADS_TEST --dart-define=ADS_CHILD_DIRECTED=$ADS_CHILD_DIRECTED"
-          flutter build apk --release --split-per-abi $ADS_DEFINES
+          flutter build apk --debug $ADS_DEFINES
           flutter build apk --release $ADS_DEFINES
           flutter build appbundle --release $ADS_DEFINES
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/app-release.aab
     publishing:
       email:
-        recipients:
-          - dev@blockclash.game
         notify:
           success: true
           failure: true
-
-  android-debug:
-    name: Block Clash — Fast QA Debug APK
-    max_build_duration: 20
-    instance_type: mac_mini_m2
-    environment:
-      flutter: stable
-      node: 22
-      java: 21
-    scripts:
-      - name: Build offline game assets
-        script: |
-          npm install --no-audit --no-fund
-          npm run lint
-          npm run build:android
-      - name: Bootstrap Android & build debug APK
-        script: |
-          flutter pub get
-          flutter test
-          if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
-          fi
-          node scripts/configure-android-ci.mjs
-          flutter build apk --debug
-    artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
