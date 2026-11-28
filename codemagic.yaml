@@ -8,7 +8,7 @@ workflows:
       node: 22
       java: 21
       vars:
-        PACKAGE_NAME: "cubora.blockblast.game"
+        PACKAGE_NAME: "cubora.blockclash.game"
         # TEST ads until the app is live on Play. Flip to "false" ONLY for the real
         # Play Store release (never click your own live ads - it can ban the account).
         ADS_TEST: "true"
@@ -43,7 +43,7 @@ workflows:
       - name: Bootstrap & configure Android project
         script: |
           if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
+            flutter create . --platforms=android --org cubora.blockclash.game --project-name cubora
           fi
           node scripts/configure-android-ci.mjs
       - name: Build Debug APK, Release APK and Play Store AAB
@@ -72,7 +72,7 @@ workflows:
       android_signing:
         - blockclash_upload
       vars:
-        PACKAGE_NAME: "cubora.blockblast.game"
+        PACKAGE_NAME: "cubora.blockclash.game"
         # "false" = REAL ads (Play Store release build). Do not click your own live ads.
         # Set back to "true" for any build you will test on your own phone.
         ADS_TEST: "false"
@@ -94,7 +94,7 @@ workflows:
       - name: Bootstrap & configure Android project (release signing)
         script: |
           if [ ! -d "android" ]; then
-            flutter create . --platforms=android --org cubora.blockblast.game --project-name cubora
+            flutter create . --platforms=android --org cubora.blockclash.game --project-name cubora
           fi
           node scripts/configure-android-ci.mjs
           grep -q 'signingConfigs.getByName("release")' android/app/build.gradle.kts \
