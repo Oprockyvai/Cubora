@@ -22,6 +22,10 @@ import {
   SaveState,
   SoundPackId,
 } from '../types/game';
+import {
+  getActiveEndlessAchievements,
+  resolveEndlessAchievement,
+} from './endlessAchievements';
 import { grantPowerUpStock } from './powerUpManager';
 
 export function xpForNextLevel(level: number): number {
@@ -330,7 +334,7 @@ export function claimAchievementReward(
   nextCb: SaveState;
   gemsAwarded: number;
 } {
-  const def = ACHIEVEMENTS.find((a) => a.id === achId);
+  const def = ACHIEVEMENTS.find((a) => a.id === achId) ?? resolveEndlessAchievement(achId);
   if (!def) {
     return { ok: false, reason: 'not_found', nextCb: cb, gemsAwarded: 0 };
   }
@@ -369,6 +373,21 @@ export function checkNewlyUnlockedAchievements(
 
   for (const a of ACHIEVEMENTS) {
     if (!nextAch[a.id] && a.getProgress(cb, prog) >= a.target) {
+      nextAch[a.id] = Date.now();
+      nextClaimed[a.id] = true;
+      autoGems += a.rewardGems;
+      newlyUnlocked.push(a);
+    }
+  }
+
+  // Endless tiers: finishing one immediately reveals the next, so keep going until
+  // no visible tier is already satisfied (bounded, in case of a huge jump).
+  for (let guard = 0; guard < 500; guard++) {
+    const hits = getActiveEndlessAchievements({ ...cb, ach: nextAch }, prog).filter(
+      (a) => a.getProgress(cb, prog) >= a.target
+    );
+    if (hits.length === 0) break;
+    for (const a of hits) {
       nextAch[a.id] = Date.now();
       nextClaimed[a.id] = true;
       autoGems += a.rewardGems;

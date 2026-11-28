@@ -87,3 +87,36 @@ test('Cosmetic skin unlock enforces playerLevel, gem balance, and equip persiste
   assert.equal(bought.nextCb.equippedSkin, 'gemstone');
   assert.ok(bought.nextCb.unlockedSkins.includes('gemstone'));
 });
+
+test('Endless achievements: finishing a tier reveals the next one, forever', async () => {
+  const { getActiveEndlessAchievements, resolveEndlessAchievement } = await import('./endlessAchievements');
+  const { checkNewlyUnlockedAchievements } = await import('./progressionManager');
+  const prog = { u: 1 } as Parameters<typeof checkNewlyUnlockedAchievements>[1];
+
+  const fresh = createDefaultSaveState();
+  assert.equal(getActiveEndlessAchievements(fresh, prog).length, 0, 'nothing before the fixed ones are done');
+
+  // 10,000 lifetime points completes the fixed "10,000 Points" achievement -> tier 2 (25,000) appears.
+  const a = checkNewlyUnlockedAchievements({ ...fresh, st: { ...fresh.st, sum: 10000 } }, prog);
+  const tier2 = getActiveEndlessAchievements(a.nextCb, prog).find((x) => x.id === 'e_pts_2');
+  assert.ok(tier2, 'tier 2 is now visible');
+  assert.equal(tier2.target, 25000);
+  assert.equal(a.nextCb.ach.e_pts_2, undefined, 'tier 2 is not unlocked yet');
+
+  // 60,000 points clears tiers 2 (25k) and 3 (50k) in one go and reveals tier 4 (100k).
+  const b = checkNewlyUnlockedAchievements({ ...a.nextCb, st: { ...a.nextCb.st, sum: 60000 } }, prog);
+  assert.ok(b.nextCb.ach.e_pts_2 && b.nextCb.ach.e_pts_3);
+  const next = getActiveEndlessAchievements(b.nextCb, prog).find((x) => x.id.startsWith('e_pts_'));
+  assert.equal(next?.id, 'e_pts_4');
+  assert.equal(next?.target, 100000);
+
+  // Gems are paid exactly once, and re-checking is a no-op.
+  const again = checkNewlyUnlockedAchievements(b.nextCb, prog);
+  assert.equal(again.newlyUnlocked.length, 0);
+
+  // Rewards grow, ids resolve, garbage does not.
+  assert.ok((resolveEndlessAchievement('e_pts_9')?.rewardGems ?? 0) > (resolveEndlessAchievement('e_pts_2')?.rewardGems ?? 0));
+  assert.equal(resolveEndlessAchievement('e_pts_1'), null);
+  assert.equal(resolveEndlessAchievement('e_nope_3'), null);
+  assert.equal(resolveEndlessAchievement('k10'), null);
+});
