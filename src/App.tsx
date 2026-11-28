@@ -9,6 +9,14 @@ import { memoStable } from './components/memoStable';
 import { Pages } from './components/Pages';
 import { PowerUpModal } from './components/PowerUpModal';
 import { SplashScreen } from './components/SplashScreen';
+import {
+  AD_GEMS_REWARD,
+  adGemsLeftToday,
+  consumeAdGemsToday,
+  installAdsBridge,
+  notifyGameOverForInterstitial,
+  requestRewardedAd,
+} from './utils/adsBridge';
 import { TutorialModal } from './components/TutorialModal';
 import { ActiveStreakFlare } from './components/WinStreakOverlay';
 import {
@@ -1909,6 +1917,55 @@ export function App() {
     return true;
   }, [reviveBoard, showGemToast]);
 
+  const adBusyRef = useRef(false);
+
+  // Rewarded ad instead of 10 gems: same revive, granted only if the ad was completed.
+  const handleContinueWithAd = useCallback(async (): Promise<void> => {
+    if (adBusyRef.current) return;
+    adBusyRef.current = true;
+    try {
+      const outcome = await requestRewardedAd();
+      if (outcome !== 'rewarded') {
+        if (outcome === 'failed') showGemToast('Ad not available');
+        return;
+      }
+      setFailState((prev) => ({ ...prev, open: false }));
+      setRevived(true);
+      reviveBoard(
+        gameRef.current.board,
+        gameRef.current.boardItems,
+        gameRef.current.mode === 'level'
+      );
+    } finally {
+      adBusyRef.current = false;
+    }
+  }, [reviveBoard, showGemToast]);
+
+  // Rewarded ad for a few gems, capped per day so the economy stays balanced.
+  const handleWatchAdForGems = useCallback(async (): Promise<void> => {
+    if (adBusyRef.current) return;
+    if (adGemsLeftToday() <= 0) {
+      showGemToast('Come back tomorrow for more');
+      return;
+    }
+    adBusyRef.current = true;
+    try {
+      const outcome = await requestRewardedAd();
+      if (outcome !== 'rewarded') {
+        if (outcome === 'failed') showGemToast('Ad not available');
+        return;
+      }
+      consumeAdGemsToday();
+      audioEngine.sfx('reward');
+      setCb((prev) => ({ ...prev, gems: prev.gems + AD_GEMS_REWARD }));
+      showGemToast(`+${AD_GEMS_REWARD} Gems`);
+    } finally {
+      adBusyRef.current = false;
+    }
+  }, [showGemToast]);
+
+  useEffect(() => installAdsBridge(), []);
+
   const handleGiveUp = useCallback(() => {
     eraseResumeSnapshot();
     setActiveTargetTool(null);
@@ -2501,6 +2558,7 @@ export function App() {
         gems={cb.gems}
         playerLevel={cb.playerLevel || 1}
         onRefill={handleRefillPowerUp}
+        onWatchAdForGems={handleWatchAdForGems}
         onClose={() => setShowPowerUpModal(false)}
         onInteract={handleInteract}
       />
@@ -2576,6 +2634,7 @@ export function App() {
         onWinToMap={openMap}
         failState={failState}
         onContinueWithGems={handleContinueWithGems}
+        onContinueWithAd={handleContinueWithAd}
         onGiveUp={handleGiveUp}
         showHeartBreak={showHeartBreak}
         heartBreakRunId={heartBreakRunId}
@@ -2585,9 +2644,10 @@ export function App() {
           lives: livesState.n,
           nextLifeText,
         }}
-        onOverPlay={() =>
-          startNewGame(mode, lv?.n, mode === 'timer' ? timerDur : undefined)
-        }
+        onOverPlay={() => {
+          if (overState.mode === 'over') notifyGameOverForInterstitial();
+          startNewGame(mode, lv?.n, mode === 'timer' ? timerDur : undefined);
+        }}
         onOverMenu={showHomeMenu}
         selectedAchievement={selectedAchievement}
         onCloseAchievementDetail={() => setSelectedAchievement(null)}
