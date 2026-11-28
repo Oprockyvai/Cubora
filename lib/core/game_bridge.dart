@@ -1,13 +1,17 @@
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'ads_policy.dart';
+
 /// Strength of a haptic pulse requested by the game.
 enum HapticLevel { none, tick, light, medium, heavy }
 
 /// Talks to the "cubora-native" script that is part of assets/game/index.html.
 ///
 ///  * JS -> Flutter : `CuboraBridge.postMessage('h:<ms>')` (haptics)
-///  * Flutter -> JS : `__cuboraBack()`, `__cuboraPause()`, `__cuboraResume()`
+///  * Flutter -> JS : `__cuboraBack()`, `__cuboraPause()`, `__cuboraResume()`,
+///                    `__cuboraAdState(rewardedReady, interstitialReady)`,
+///                    `__cuboraAdResult(requestId, outcome)`
 class GameBridge {
   GameBridge._();
 
@@ -72,6 +76,18 @@ class GameBridge {
   static Future<void> resume(WebViewController controller) => _run(
         controller,
         'window.__cuboraResume && window.__cuboraResume()',
+      );
+
+  /// Reports the result of a rewarded ad request back to the page.
+  /// [requestId] was validated by [AdMessage.parse], so it is safe to inline.
+  static Future<void> adResult(
+    WebViewController controller,
+    String requestId,
+    AdOutcome outcome,
+  ) =>
+      _run(
+        controller,
+        'window.__cuboraAdResult && window.__cuboraAdResult("$requestId","${outcome.name}")',
       );
 
   static Future<void> _run(WebViewController c, String js) async {
