@@ -1,6 +1,7 @@
 import React from 'react';
 import { POWER_UP_DEFS, POWER_UP_ORDER } from '../data/constants';
 import { PowerUpId, PowerUpInventory } from '../types/game';
+import { AD_GEMS_REWARD, adGemsLeftToday, useAdState } from '../utils/adsBridge';
 import { isPowerUpUnlocked } from '../utils/powerUpManager';
 import { GemIcon, LockIcon, PowerUpIcon } from './Icons';
 
@@ -10,6 +11,7 @@ interface PowerUpModalProps {
   gems: number;
   playerLevel: number;
   onRefill: (id: PowerUpId) => void;
+  onWatchAdForGems: () => void;
   onClose: () => void;
   onInteract: () => void;
 }
@@ -20,10 +22,13 @@ export const PowerUpModal: React.FC<PowerUpModalProps> = ({
   gems,
   playerLevel,
   onRefill,
+  onWatchAdForGems,
   onClose,
   onInteract,
 }) => {
+  const adState = useAdState();
   if (!open) return null;
+  const showAdButton = adState.rewarded && adGemsLeftToday() > 0;
 
   return (
     <div
@@ -38,7 +43,7 @@ export const PowerUpModal: React.FC<PowerUpModalProps> = ({
           <div>
             <h2 id="puModalTitle">Power-Up Inventory</h2>
             <p className="pu-modal-sub">
-              Optional tactical tools · Stored &amp; earned 100% offline
+              Optional tactical tools · Stored on this device
             </p>
           </div>
           <div className="gem">
@@ -98,6 +103,21 @@ export const PowerUpModal: React.FC<PowerUpModalProps> = ({
             );
           })}
         </div>
+
+        {showAdButton && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            id="puWatchAd"
+            onClick={() => {
+              onInteract();
+              onWatchAdForGems();
+            }}
+          >
+            Watch Ad · +{AD_GEMS_REWARD}
+            <GemIcon />
+          </button>
+        )}
 
         <button
           type="button"

@@ -295,7 +295,7 @@ export const Pages: React.FC<PagesProps> = ({
           </div>
 
           <p className="fine">
-            Block Clash v2.0 · 100% Offline. All sounds are synthesized locally;
+            Block Clash v2.0 · Plays offline. All sounds are synthesized locally;
             all scores and progress stay strictly on your device.
           </p>
         </div>

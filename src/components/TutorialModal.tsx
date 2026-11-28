@@ -45,7 +45,7 @@ const STEPS = [
     id: 'rewards',
     badge: 'STEP 5 OF 5',
     title: 'Missions, Skins & Offline Rewards',
-    body: 'Complete daily missions, level up your XP rank, unlock block skins, sound packs, and board themes — 100% offline on your device.',
+    body: 'Complete daily missions, level up your XP rank, unlock block skins, sound packs, and board themes — saved on your device.',
   },
 ] as const;
 

@@ -12,6 +12,7 @@ import {
   MatchHistoryEntry,
   SaveState,
 } from '../types/game';
+import { useAdState } from '../utils/adsBridge';
 import { describeLevel, makeLevel } from '../utils/levelLogic';
 import { formatModeLabel } from '../utils/progressionManager';
 import { formatClock, formatDuration, getDailyRewardState } from '../utils/storage';
@@ -104,6 +105,7 @@ interface ModalsProps {
     revived: boolean;
   };
   onContinueWithGems: () => boolean;
+  onContinueWithAd: () => void;
   onGiveUp: () => void;
 
   // Heart break
@@ -179,6 +181,7 @@ export const Modals: React.FC<ModalsProps> = ({
   onWinToMap,
   failState,
   onContinueWithGems,
+  onContinueWithAd,
   onGiveUp,
   showHeartBreak,
   heartBreakRunId,
@@ -194,6 +197,7 @@ export const Modals: React.FC<ModalsProps> = ({
   const [draftName, setDraftName] = useState(cb.name);
   const [draftAv, setDraftAv] = useState(cb.av);
   const watchBtnRef = useRef<HTMLButtonElement | null>(null);
+  const adState = useAdState();
 
   useEffect(() => {
     if (showProfile) {
@@ -705,6 +709,19 @@ export const Modals: React.FC<ModalsProps> = ({
                 <GemIcon />
                 10
               </span>
+            </button>
+          )}
+          {!failState.revived && adState.rewarded && (
+            <button
+              type="button"
+              className="btn2 show btn-outline"
+              id="watchAd"
+              onClick={() => {
+                onInteract();
+                onContinueWithAd();
+              }}
+            >
+              Watch Ad to Continue
             </button>
           )}
           <button
