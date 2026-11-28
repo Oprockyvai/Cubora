@@ -6628,3 +6628,13 @@ body[data-drag] .meter-surge {
 .wbn strong {
   letter-spacing: 0.01em;
 }
+
+/* Rewarded-ad button in the Power-Up modal: full width, gem icon inline. */
+#puWatchAd {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
