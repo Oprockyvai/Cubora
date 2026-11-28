@@ -73,9 +73,9 @@ workflows:
         - blockclash_upload
       vars:
         PACKAGE_NAME: "cubora.blockblast.game"
-        # Keep "true" while testing on Play (internal/closed testing).
-        # Set "false" only for the real public release.
-        ADS_TEST: "true"
+        # "false" = REAL ads (Play Store release build). Do not click your own live ads.
+        # Set back to "true" for any build you will test on your own phone.
+        ADS_TEST: "false"
         ADS_CHILD_DIRECTED: "false"
     scripts:
       - name: Install Node dependencies & run verification tests
