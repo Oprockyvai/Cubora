@@ -39,7 +39,11 @@ class AdsConfig {
       useTestAds ? _interstitialTest : _interstitialLive;
 }
 
-typedef AdStateListener = void Function(bool rewardedReady, bool interstitialReady);
+typedef AdStateListener = void Function(
+  bool rewardedReady,
+  bool interstitialReady,
+  bool privacyOptionsRequired,
+);
 
 /// Owns the Mobile Ads SDK: consent, initialisation, preloading and showing.
 /// Every failure is swallowed on purpose - the game must keep working offline.
@@ -52,6 +56,7 @@ class AdsService {
   AdStateListener? onStateChanged;
 
   bool _started = false;
+  bool _privacyRequired = false;
   bool _sdkReady = false;
   bool _showing = false;
 
@@ -66,6 +71,7 @@ class AdsService {
 
   bool get rewardedReady => _rewarded != null && !_showing;
   bool get interstitialReady => _interstitial != null && !_showing;
+  bool get privacyOptionsRequired => _privacyRequired;
 
   /// Gathers consent (GDPR/UMP), initialises the SDK and preloads the first ads.
   Future<void> start() async {
@@ -73,6 +79,7 @@ class AdsService {
     _started = true;
     try {
       final canRequest = await _gatherConsent();
+      await _refreshPrivacyStatus();
       if (!canRequest) return;
       await MobileAds.instance.updateRequestConfiguration(
         RequestConfiguration(
@@ -127,7 +134,42 @@ class AdsService {
     return done.future;
   }
 
-  void _notify() => onStateChanged?.call(rewardedReady, interstitialReady);
+  void _notify() =>
+      onStateChanged?.call(rewardedReady, interstitialReady, _privacyRequired);
+
+  /// Whether the region requires a visible "privacy / ad choices" entry point.
+  Future<void> _refreshPrivacyStatus() async {
+    try {
+      _privacyRequired = await ConsentInformation.instance
+              .getPrivacyOptionsRequirementStatus() ==
+          PrivacyOptionsRequirementStatus.required;
+    } catch (_) {
+      _privacyRequired = false;
+    }
+    _notify();
+  }
+
+  /// Opens the user-facing privacy options form (change / withdraw consent).
+  Future<void> showPrivacyOptions() {
+    final done = Completer<void>();
+    try {
+      ConsentForm.showPrivacyOptionsForm((error) {
+        if (error != null) debugPrint('Privacy options: ${error.message}');
+        if (!done.isCompleted) done.complete();
+      });
+    } catch (e) {
+      debugPrint('Privacy options failed: $e');
+      if (!done.isCompleted) done.complete();
+    }
+    return done.future.then((_) async {
+      await _refreshPrivacyStatus();
+      // Consent may have just been granted: make sure ads can load now.
+      if (_sdkReady) {
+        _loadRewarded();
+        _loadInterstitial();
+      }
+    });
+  }
 
   Duration _backoff(int failures) =>
       Duration(seconds: math.min(60, 4 * math.pow(2, failures).toInt()));

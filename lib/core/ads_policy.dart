@@ -9,6 +9,7 @@ enum AdOutcome { rewarded, closed, failed }
 ///  * `ad:query`                 - game asks for the current ad availability
 ///  * `ad:rewarded:<requestId>`  - show a rewarded ad
 ///  * `ad:interstitial`          - game over opportunity for an interstitial
+///  * `ad:privacy`               - open the privacy / ad choices form
 sealed class AdMessage {
   const AdMessage();
 
@@ -22,6 +23,8 @@ sealed class AdMessage {
     switch (parts.first) {
       case 'query':
         return parts.length == 1 ? const AdQuery() : null;
+      case 'privacy':
+        return parts.length == 1 ? const AdPrivacy() : null;
       case 'interstitial':
         return parts.length == 1 ? const AdInterstitial() : null;
       case 'rewarded':
@@ -41,6 +44,10 @@ final class AdQuery extends AdMessage {
 
 final class AdInterstitial extends AdMessage {
   const AdInterstitial();
+}
+
+final class AdPrivacy extends AdMessage {
+  const AdPrivacy();
 }
 
 final class AdRewarded extends AdMessage {
