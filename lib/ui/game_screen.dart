@@ -50,13 +50,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   /// Tells the game which ad formats are ready (it hides ad buttons otherwise).
-  void _pushAdState(bool rewardedReady, bool interstitialReady) {
+  void _pushAdState(
+    bool rewardedReady,
+    bool interstitialReady,
+    bool privacyRequired,
+  ) {
     final c = _web;
     if (c == null || !mounted) return;
     unawaited(
       c
           .runJavaScript(
-            'window.__cuboraAdState && window.__cuboraAdState($rewardedReady,$interstitialReady)',
+            'window.__cuboraAdState && window.__cuboraAdState($rewardedReady,$interstitialReady,$privacyRequired)',
           )
           .catchError((Object _) {}),
     );
@@ -72,7 +76,10 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _pushAdState(
           AdsService.instance.rewardedReady,
           AdsService.instance.interstitialReady,
+          AdsService.instance.privacyOptionsRequired,
         );
+      case AdPrivacy():
+        await AdsService.instance.showPrivacyOptions();
       case AdInterstitial():
         await GameBridge.pause(c);
         await AdsService.instance.maybeShowInterstitial();
