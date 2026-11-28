@@ -10,7 +10,7 @@
 ```
 Drag. Fit. Clash. Chain.
 
-Block Clash is a tactile, jewel-crafted 8x8 block puzzle built for quick breaks and deep combo runs alike. Place beveled crystal blocks onto the slate board, clear full rows and columns to shatter tiles, and chain consecutive clears for multiplied scores — 100% offline, with zero ads and zero waiting.
+Block Clash is a tactile, jewel-crafted 8x8 block puzzle built for quick breaks and deep combo runs alike. Place beveled crystal blocks onto the slate board, clear full rows and columns to shatter tiles, and chain consecutive clears for multiplied scores — plays fully offline, with only optional rewarded ads and no waiting.
 
 THREE DISTINCT GAME MODES
 - LEVELS: Journey vertically across four illustrated realms — Crystal Valley, Cloud City, Volcano, and Abyss — with quick realm switcher tabs. Tackle unique level goals (points, line clears, collectible relics, color targets, and combo streaks) with limited moves and up to 3 stars per stage.
@@ -23,8 +23,8 @@ BUILT FOR TACTILE FEEL
 - Interactive 4-step visual guide, full Pause overlay, and customizable procedural synth music, sound effects, haptics, and reduced-motion accessibility
 - Daily login gem streaks, 10 local achievements, detailed lifetime statistics, and personal top-10 device scoreboards
 
-100% OFFLINE & PRIVATE
-Play on flights, commutes, or anywhere without signal. Block Clash contains zero ads, requires no account, and never collects or transmits personal data.
+PLAYS OFFLINE
+Play on flights, commutes, or anywhere without signal. Block Clash requires no account and keeps your progress on your device. The app contains ads (optional rewarded ads for bonus gems or a continue, plus occasional ads between games).
 ```
 
 **Category:** Games > Puzzle  |  **Tags:** Puzzle, Block Puzzle, Casual, Offline, Single Player
