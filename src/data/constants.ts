@@ -17,6 +17,8 @@ import { THEMED_MAPS } from './maps';
 export const GRID_SIZE = 8;
 export const MAX_LIVES = 5;
 export const LIFE_REGEN_MS = 15 * 60 * 1000;
+/** Gems to buy one life (a bit above the 10-gem revive). Lives only apply to Level mode. */
+export const LIFE_GEM_COST = 20;
 
 export const SHAPES: CellCoord[][] = [
   [[0, 0]],
