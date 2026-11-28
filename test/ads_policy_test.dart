@@ -6,6 +6,7 @@ void main() {
     test('parses valid messages', () {
       expect(AdMessage.parse('ad:query'), isA<AdQuery>());
       expect(AdMessage.parse('ad:interstitial'), isA<AdInterstitial>());
+      expect(AdMessage.parse('ad:privacy'), isA<AdPrivacy>());
       final r = AdMessage.parse('ad:rewarded:r_12');
       expect(r, isA<AdRewarded>());
       expect((r! as AdRewarded).requestId, 'r_12');
@@ -20,6 +21,7 @@ void main() {
       expect(AdMessage.parse('ad:rewarded:a;alert(1)'), isNull);
       expect(AdMessage.parse('ad:rewarded:a:b'), isNull);
       expect(AdMessage.parse('ad:query:x'), isNull);
+      expect(AdMessage.parse('ad:privacy:x'), isNull);
       expect(AdMessage.parse('ad:unknown'), isNull);
     });
   });
