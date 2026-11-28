@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   DAILY_REWARDS,
+  LIFE_GEM_COST,
   MAX_LIVES,
   TIMER_DURATIONS,
 } from '../data/constants';
@@ -12,7 +13,7 @@ import {
   MatchHistoryEntry,
   SaveState,
 } from '../types/game';
-import { useAdState } from '../utils/adsBridge';
+import { adLivesLeftToday, useAdState } from '../utils/adsBridge';
 import { describeLevel, makeLevel } from '../utils/levelLogic';
 import { formatModeLabel } from '../utils/progressionManager';
 import { formatClock, formatDuration, getDailyRewardState } from '../utils/storage';
@@ -123,8 +124,13 @@ interface ModalsProps {
     lbRank: number;
     lives: number;
     nextLifeText: string;
+    needsLife?: boolean;
   };
   onOverPlay: () => void;
+  onBuyLife: () => void;
+  onWatchAdForLife: () => void;
+  /** True in Level mode, the only mode where lives are used. */
+  livesApply: boolean;
   onOverMenu: () => void;
 
   // Achievement detail & Match detail modals
@@ -183,6 +189,9 @@ export const Modals: React.FC<ModalsProps> = ({
   onContinueWithGems,
   onContinueWithAd,
   onGiveUp,
+  onBuyLife,
+  onWatchAdForLife,
+  livesApply,
   showHeartBreak,
   heartBreakRunId,
   overState,
@@ -680,7 +689,9 @@ export const Modals: React.FC<ModalsProps> = ({
           <b id="fs">{failState.score.toLocaleString('en-US')}</b>
           <p id="fmsg">
             {failState.revived
-              ? 'You already revived once this run. Give up to record your score and lose one life.'
+              ? livesApply
+                ? 'You already revived once this run. Give up to record your score and lose one life.'
+                : 'You already revived once this run. Give up to record your score.'
               : 'Clear 3 dense rows for 10 gems and keep your combo alive.'}
           </p>
           {!failState.revived && (
@@ -795,7 +806,7 @@ export const Modals: React.FC<ModalsProps> = ({
           <p
             className="fl"
             id="fl"
-            style={{ display: overState.mode === 'start' ? 'none' : 'block' }}
+            style={{ display: overState.mode === 'start' || overState.needsLife ? 'none' : 'block' }}
           >
             {overState.scoreLabel}
           </p>
@@ -807,8 +818,10 @@ export const Modals: React.FC<ModalsProps> = ({
           </b>
           <p id="fbest">
             {overState.mode === 'start'
-              ? 'Give up after a fail and you lose one life.'
-              : `Best: ${Math.round(overState.best).toLocaleString('en-US')}`}
+              ? 'Lives are only used in Level mode.'
+              : overState.needsLife
+                ? 'Buy a life with gems or wait for one to regenerate.'
+                : `Best: ${Math.round(overState.best).toLocaleString('en-US')}`}
           </p>
           <p id="lbr" className="lbr">
             {overState.mode !== 'start' && overState.lbRank > 0
@@ -816,21 +829,54 @@ export const Modals: React.FC<ModalsProps> = ({
               : ''}
           </p>
           <p id="lmsg">
-            {overState.lives < 1
-              ? `No lives left · Next life in ${overState.nextLifeText}`
-              : `${overState.lives} of ${MAX_LIVES} lives available`}
+            {overState.needsLife
+              ? overState.lives < 1
+                ? `No lives left · Next life in ${overState.nextLifeText}`
+                : `${overState.lives} of ${MAX_LIVES} lives available`
+              : ''}
           </p>
+          {overState.needsLife && overState.lives < 1 && (
+            <button
+              type="button"
+              className={`btn${cb.gems < LIFE_GEM_COST ? ' dim' : ''}`}
+              id="buyLife"
+              onClick={() => {
+                onInteract();
+                onBuyLife();
+              }}
+            >
+              Buy a Life · {LIFE_GEM_COST}
+              <GemIcon />
+            </button>
+          )}
+          {overState.needsLife && overState.lives < 1 && adState.rewarded && adLivesLeftToday() > 0 && (
+            <button
+              type="button"
+              className="btn2 show btn-outline"
+              id="watchAdLife"
+              onClick={() => {
+                onInteract();
+                onWatchAdForLife();
+              }}
+            >
+              Watch Ad · +1 Life
+            </button>
+          )}
           <button
             type="button"
             className="btn"
             id="again"
-            disabled={overState.lives < 1}
+            disabled={!!overState.needsLife && overState.lives < 1}
             onClick={() => {
               onInteract();
               onOverPlay();
             }}
           >
-            {overState.mode === 'start' ? 'Play' : 'Play Again'}
+            {overState.mode === 'start'
+              ? 'Play'
+              : overState.needsLife
+                ? 'Play Level'
+                : 'Play Again'}
           </button>
           <button
             type="button"

@@ -26,6 +26,11 @@ import {
   getPersonalChallenges,
   xpForNextLevel,
 } from '../utils/progressionManager';
+import { openPrivacyOptions, useAdState } from '../utils/adsBridge';
+import {
+  countEndlessUnlocked,
+  getActiveEndlessAchievements,
+} from '../utils/endlessAchievements';
 import { formatDuration, getDailyRewardState } from '../utils/storage';
 import {
   BackIcon,
@@ -85,6 +90,7 @@ export const Pages: React.FC<PagesProps> = ({
   onOpenHistoryDetail,
   onInteract,
 }) => {
+  const adState = useAdState();
   const [, setTick] = useState(0);
   const [collectionTab, setCollectionTab] = useState<
     'themes' | 'skins' | 'fx' | 'trophies'
@@ -166,11 +172,11 @@ export const Pages: React.FC<PagesProps> = ({
     ['Items collected', st.items],
   ];
 
-  const unlockedAchCount = ACHIEVEMENTS.filter((a) => !!cb.ach[a.id]).length;
+  const allAch = [...ACHIEVEMENTS, ...getActiveEndlessAchievements(cb, prog)];
+  const unlockedAchCount =
+    ACHIEVEMENTS.filter((a) => !!cb.ach[a.id]).length + countEndlessUnlocked(cb);
   const filteredAch =
-    achFilter === 'all'
-      ? ACHIEVEMENTS
-      : ACHIEVEMENTS.filter((a) => a.category === achFilter);
+    achFilter === 'all' ? allAch : allAch.filter((a) => a.category === achFilter);
   const lbList = cb.lb[lbTab] || [];
   const dailyRewardState = getDailyRewardState(cb.daily);
   const personalChallenges = getPersonalChallenges(cb, prog);
@@ -275,6 +281,25 @@ export const Pages: React.FC<PagesProps> = ({
                 Open Guide
               </button>
             </div>
+            {adState.privacyOptions && (
+              <div className="rw">
+                <div>
+                  <b>Privacy &amp; ad choices</b>
+                  <small>Review or change your ad consent</small>
+                </div>
+                <button
+                  type="button"
+                  className="btn2 show btn-inline"
+                  id="privacyOpts"
+                  onClick={() => {
+                    onInteract();
+                    openPrivacyOptions();
+                  }}
+                >
+                  Manage
+                </button>
+              </div>
+            )}
             <div className="rw">
               <div>
                 <b>Reset all data</b>
@@ -547,7 +572,7 @@ export const Pages: React.FC<PagesProps> = ({
           </div>
 
           <div className="sec">
-            {unlockedAchCount} of {ACHIEVEMENTS.length} unlocked · Tap card for details
+            {unlockedAchCount} unlocked · New goals keep coming · Tap card for details
           </div>
 
           {filteredAch.map((a) => {

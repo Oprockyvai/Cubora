@@ -190,7 +190,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div className="tm-pill violet">
                 <strong>Classic</strong>
-                <small>Endless · 5 Lives</small>
+                <small>Endless · No lives needed</small>
               </div>
             </div>
           )}

@@ -812,6 +812,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
             </div>
           </div>
 
+          {mode === 'level' && (
           <div className="lives" id="lives" aria-label="Lives">
             {Array.from({ length: MAX_LIVES }).map((_, i) => (
               <HeartIcon key={i} on={i < lives} />
@@ -820,6 +821,7 @@ export const GameBoardView: React.FC<GameBoardViewProps> = ({
               <span className="nl">+1 in {nextLifeText}</span>
             )}
           </div>
+          )}
         </div>
 
         {/* Goalbar */}
